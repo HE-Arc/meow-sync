@@ -51,7 +51,5 @@ class ApiInterface:
     def remove_from_playlist_single(self, playlist_id: str, song_id: str) -> ApiResponse:
         return self.remove_from_playlist(playlist_id, [song_id])
 
-    def create_playlist(self, title: str, author: str) -> ApiResponse:
-        raise ValueError('Method not implemented')
-    def delete_playlist(self, playlist_id: Any) -> ApiResponse:
+    def create_playlist(self, title: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
         raise ValueError('Method not implemented')

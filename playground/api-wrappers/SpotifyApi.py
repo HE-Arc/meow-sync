@@ -33,7 +33,6 @@ class SpotifyApi(ApiInterface):
 
             # Spotify API error
             if playlist_response.status_code != 200:
-                print(playlist_response.status_code)
                 return ApiResponse[list[ApiPlaylist]](
                     success=False,
                     message=data['error']['message'],
@@ -110,7 +109,6 @@ class SpotifyApi(ApiInterface):
             # Invalid JSON error
             try:
                 data = playlist_songs_response.json()
-                print(data['next'])
             except:
                 return ApiResponse[ApiPlaylist](
                     success=False,
@@ -155,7 +153,6 @@ class SpotifyApi(ApiInterface):
     def _song_id_to_uri(self, song_ids: list[str]):
         prefix = "spotify:track:"
         result = list(map(lambda song : prefix + song, song_ids))
-        print(result)
 
         return result
 
@@ -171,13 +168,11 @@ class SpotifyApi(ApiInterface):
             request_body = {
                 "uris": self._song_id_to_uri(chunk)
             }
-            print('req_body: ', request_body)
 
             response = requests.post(request_url, json=request_body, headers=self.HEADERS)
             
             try:
                 data = response.json()
-                print(data)
             except:
                 return ApiResponse[None](
                     success=False,
@@ -198,7 +193,7 @@ class SpotifyApi(ApiInterface):
         return ApiResponse(
             success=True,
             message="Successfully added songs to playlist",
-            status_code=200,
+            status_code=response.status_code,
             data=None
         )
     
@@ -211,13 +206,11 @@ class SpotifyApi(ApiInterface):
             request_body = {
                 "items": [ { 'uri': uri } for uri in self._song_id_to_uri(chunk) ]
             }
-            print('req_body: ', request_body)
 
             response = requests.delete(request_url, json=request_body, headers=self.HEADERS)
             
             try:
                 data = response.json()
-                print(data)
             except:
                 return ApiResponse[None](
                     success=False,
@@ -234,10 +227,57 @@ class SpotifyApi(ApiInterface):
                     status_code=response.status_code,
                     data=None
                 )
-        
+
+        # Happy case
         return ApiResponse[None](
             success=True,
             message="Successfully removed songs from playlist",
             status_code=200,
             data=None
+        )
+    
+    def create_playlist(self, playlist: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
+        request_url = f"{self.API_BASE_URL}/me/playlists"
+        PLAYLIST_PUBLIC = False
+        PLAYLIST_COLLABORATIVE = False
+
+        request_body = {
+            'name': playlist.title,
+            'description': playlist.description,
+            'collaborative': PLAYLIST_COLLABORATIVE,
+            'public': PLAYLIST_PUBLIC,
+        }
+
+        response = requests.post(request_url, json=request_body, headers=self.HEADERS)
+
+        # Json error
+        try:
+            data = response.json()
+        except:
+            return ApiResponse[None](
+                success=False,
+                message="Failed to parse JSON",
+                status_code=response.status_code,
+                data=None
+            )
+
+        # Spotify API error
+        if response.status_code != 201:
+            return ApiResponse[None](
+                success=False,
+                message="Spotify API Error",
+                status_code=response.status_code,
+                data=None
+            )
+        
+        playlist.author = data['owner']['display_name']
+        playlist.id = data['id']
+        playlist.songs = []
+
+        # Happy case
+        return ApiResponse[ApiPlaylist](
+            success=True,
+            message="Successfully created playlist",
+            status_code=response.status_code,
+            data=playlist
         )

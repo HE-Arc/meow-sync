@@ -1,6 +1,7 @@
 import os
 import base64
 import requests
+import json
 from flask import Flask, redirect, request, session, url_for
 from dotenv import load_dotenv
 
@@ -23,7 +24,7 @@ API_BASE_URL = "https://api.spotify.com/v1"
 
 @app.route("/spotify")
 def spotify_login():
-    scope = "playlist-read-private,playlist-modify-public,playlist-modify-private"
+    scope = "playlist-read-private,playlist-read-collaborative,playlist-modify-public,playlist-modify-private"
 
     auth_params = {
         "response_type": "code",
@@ -60,7 +61,7 @@ def spotify_callback():
 
     session["access_token"] = token_info["access_token"]
 
-    return redirect(url_for("playlists"))
+    return redirect(url_for("spotify_playlists"))
 
 
 @app.route("/spotify/playlists")
@@ -152,7 +153,7 @@ def spotify_playlist(playlist_id):
 @app.route("/spotify/playlist/add-songs", methods=["GET"])
 def spotify_playlist_form_add_songs():
     return """
-        <h2>Create Playlist</h2>
+        <h2>Add Songs</h2>
         <form method="POST" action="/spotify/playlist/add-songs">
             <label>Playlist ID:</label><br>
             <input type="text" name="playlist_id" required><br><br>
@@ -215,7 +216,7 @@ def spotify_submit_playlist_form_add_songs():
 @app.route("/spotify/playlist/remove-songs", methods=["GET"])
 def spotify_playlist_form_remove_songs():
     return """
-        <h2>Create Playlist</h2>
+        <h2>Remove Songs</h2>
         <form method="POST" action="/spotify/playlist/remove-songs">
             <label>Playlist ID:</label><br>
             <input type="text" name="playlist_id" required><br><br>
@@ -273,6 +274,57 @@ def spotify_submit_playlist_form_remove_songs():
     """
 
     return html_response
+
+@app.route("/spotify/playlist/create", methods=["GET"])
+def spotify_playlist_create():
+    return """
+        <h2>Create Playlist</h2>
+        <form method="POST" action="/spotify/playlist/create">
+            <label>Playlist Name:</label><br>
+            <input type="text" name="playlist_name" required><br><br>
+
+            <label>Playlist Descriptions:</label><br>
+            <input type="text" name="playlist_description"><br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    """
+
+@app.route("/spotify/playlist/create", methods=["POST"])
+def submit_spotify_playlist_create():
+    playlist_name = request.form.get("playlist_name", "").strip()
+    playlist_description = request.form.get("playlist_description", "").strip()
+
+    # --- Simple validation ---
+    if not playlist_name:
+        return "Error: playlist_name is required", 400
+
+    if not playlist_description:
+        return "Error: playlist_description is required", 400
+
+    access_token = session.get("access_token")
+    if not access_token:
+        return redirect("/spotify")
+
+    spotify_api = SpotifyApi(access_token=access_token)
+    response = spotify_api.create_playlist(ApiPlaylist(
+        title=playlist_name,
+        description=playlist_description,
+        author="",
+        image_url=None,
+        playlist_id=None,
+        songs=None
+        ))
+
+    return f"""
+        <h2>status: {response.status_code}</h2>
+        <h2>success: {response.success}</h2>
+        <h2>message: {response.message}</h2>
+        <hr>
+        <h2>id: {response.data.id}</h2>
+        <h2>author: {response.data.author}</h2>
+        
+    """
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)
