@@ -10,6 +10,12 @@ class ApiSong:
         self.image_url: str|None = image_url
         self.release_date: str = release_date
         self.duration_ms: int = duration_ms
+    
+    def get_formatted_duration(self):
+        total_seconds = self.duration_ms // 1000
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{int(minutes)}:{int(seconds):02d}"
 
 class ApiPlaylist:
     def __init__(self, playlist_id: Any,  title: str, description: str|None, author: str, image_url:str|None, songs: list[ApiSong]|None):
@@ -34,11 +40,18 @@ class ApiInterface:
         raise ValueError('Method not implemented')
     def get_playlist(self, playlist_id: Any) -> ApiResponse[ApiPlaylist]:
         raise ValueError('Method not implemented')
-    def add_to_playlist(self, playlist: ApiPlaylist, song: ApiSong) -> ApiResponse:
+
+    def add_to_playlist(self, playlist_id: Any, song_ids: list[Any]) -> ApiResponse:
         raise ValueError('Method not implemented')
-    def remove_from_playlist(self, playlist: ApiPlaylist, song: ApiSong) -> ApiResponse:
+    def add_to_playlist_single(self, playlist_id: str, song_id: str) -> ApiResponse:
+        return self.add_to_playlist(playlist_id, [song_id])
+        
+    def remove_from_playlist(self, playlist_id: Any, song_ids: list[Any]) -> ApiResponse:
         raise ValueError('Method not implemented')
+    def remove_from_playlist_single(self, playlist_id: str, song_id: str) -> ApiResponse:
+        return self.remove_from_playlist(playlist_id, [song_id])
+
     def create_playlist(self, title: str, author: str) -> ApiResponse:
         raise ValueError('Method not implemented')
-    def delete_playlist(self, playlist: ApiPlaylist) -> ApiResponse:
+    def delete_playlist(self, playlist_id: Any) -> ApiResponse:
         raise ValueError('Method not implemented')
