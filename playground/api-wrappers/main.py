@@ -22,7 +22,7 @@ API_BASE_URL = "https://api.spotify.com/v1"
 
 
 @app.route("/spotify")
-def login():
+def spotify_login():
     scope = "playlist-read-private,playlist-modify-public,playlist-modify-private"
 
     auth_params = {
@@ -37,7 +37,7 @@ def login():
 
 
 @app.route("/spotify/callback")
-def callback():
+def spotify_callback():
     code = request.args.get("code")
 
     auth_header = base64.b64encode(
@@ -64,7 +64,7 @@ def callback():
 
 
 @app.route("/spotify/playlists")
-def playlists():
+def spotify_playlists():
     access_token = session.get("access_token")
 
     if not access_token:
@@ -107,7 +107,7 @@ def playlists():
     return output
 
 @app.route("/spotify/playlists/<playlist_id>")
-def playlist(playlist_id):
+def spotify_playlist(playlist_id):
     access_token = session.get("access_token")
 
     if not access_token:
@@ -150,7 +150,7 @@ def playlist(playlist_id):
     return output
 
 @app.route("/spotify/playlist/add-songs", methods=["GET"])
-def playlist_form_add_songs():
+def spotify_playlist_form_add_songs():
     return """
         <h2>Create Playlist</h2>
         <form method="POST" action="/spotify/playlist/add-songs">
@@ -165,7 +165,7 @@ def playlist_form_add_songs():
     """
 
 @app.route("/spotify/playlist/add-songs", methods=["POST"])
-def submit_playlist():
+def spotify_submit_playlist_form_add_songs():
     playlist_id = request.form.get("playlist_id", "").strip()
     song_ids_raw = request.form.get("song_ids", "").strip()
 
@@ -211,6 +211,68 @@ def submit_playlist():
 
     return html_response
     
+
+@app.route("/spotify/playlist/remove-songs", methods=["GET"])
+def spotify_playlist_form_remove_songs():
+    return """
+        <h2>Create Playlist</h2>
+        <form method="POST" action="/spotify/playlist/remove-songs">
+            <label>Playlist ID:</label><br>
+            <input type="text" name="playlist_id" required><br><br>
+
+            <label>Song IDs (comma separated):</label><br>
+            <input type="text" name="song_ids" required><br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    """
+
+@app.route("/spotify/playlist/remove-songs", methods=["POST"])
+def spotify_submit_playlist_form_remove_songs():
+    playlist_id = request.form.get("playlist_id", "").strip()
+    song_ids_raw = request.form.get("song_ids", "").strip()
+
+    # --- Simple validation ---
+    if not playlist_id:
+        return "Error: playlist_id is required", 400
+
+    if not song_ids_raw:
+        return "Error: song_ids is required", 400
+
+    # --- Parse comma-separated IDs ---
+    song_ids = [
+        song_id.strip()
+        for song_id in song_ids_raw.split(",")
+        if song_id.strip()
+    ]
+
+    if not song_ids:
+        return "Error: No valid song IDs provided", 400
+    
+    access_token = session.get("access_token")
+    if not access_token:
+        return redirect("/spotify")
+
+    spotify_api = SpotifyApi(access_token=access_token)
+    spotify_api.remove_from_playlist(playlist_id, song_ids)
+    
+    # --- Manually build HTML list ---
+    ul_items = ""
+    for song in song_ids:
+        ul_items += f"<li>{song}</li>"
+
+    # --- Build full HTML response ---
+    html_response = f"""
+        <h2>Playlist Submitted</h2>
+        <p><strong>Playlist ID:</strong> {playlist_id}</p>
+
+        <h3>Song IDs:</h3>
+        <ul>
+            {ul_items}
+        </ul>
+    """
+
+    return html_response
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)

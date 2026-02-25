@@ -209,7 +209,7 @@ class SpotifyApi(ApiInterface):
             request_url = f"{self.API_BASE_URL}/playlists/{playlist_id}/items"
             
             request_body = {
-                "items": [ { 'uri': uri } for uri in chunk ]
+                "items": [ { 'uri': uri } for uri in self._song_id_to_uri(chunk) ]
             }
             print('req_body: ', request_body)
 
