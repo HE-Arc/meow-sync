@@ -1,8 +1,8 @@
 {
-  "recommendations": [
-    "Vue.volar",
-    "vitest.explorer",
-    "ms-playwright.playwright",
-    "biomejs.biome"
-  ]
+	"recommendations": [
+		"Vue.volar",
+		"vitest.explorer",
+		"ms-playwright.playwright",
+		"biomejs.biome"
+	]
 }
