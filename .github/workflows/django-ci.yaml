@@ -1,0 +1,105 @@
+# Generated using copilot-cli
+name: "API: Run linting checks"
+on:
+  pull_request:
+    paths:
+      - api/**
+      - .github/workflows/api-ci.yaml
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.14.3'
+  UV_VERSION: '0.10.4'
+
+jobs:
+  install-dependencies:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Cache .venv
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: api/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('api/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: api
+        run: uv sync --group dev
+
+  ruff-check:
+    name: Ruff Check
+    needs: install-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Restore .venv from cache
+        uses: actions/cache@v4
+        with:
+          path: api/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('api/uv.lock') }}
+
+      - name: Run ruff check
+        working-directory: api
+        run: .venv/bin/ruff check
+
+  ruff-format:
+    name: Ruff Format
+    needs: install-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Restore .venv from cache
+        uses: actions/cache@v4
+        with:
+          path: api/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('api/uv.lock') }}
+
+      - name: Run ruff format check
+        working-directory: api
+        run: .venv/bin/ruff format --check
+
+  tests:
+    name: Django Tests
+    needs: install-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Restore .venv from cache
+        uses: actions/cache@v4
+        with:
+          path: api/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('api/uv.lock') }}
+
+      - name: Run Django tests
+        working-directory: api
+        run: uv run manage.py test
