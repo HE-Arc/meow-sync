@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         working-directory: api
-        run: uv sync --all-groups
+        run: uv sync --all-extras
 
   ruff-check:
     name: Ruff Check
