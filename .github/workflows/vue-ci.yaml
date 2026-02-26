@@ -87,6 +87,7 @@ jobs:
 
       - name: Install Playwright Browsers
         run: |
+          cd frontend/
           npm ci
           npx playwright install --with-deps
 
