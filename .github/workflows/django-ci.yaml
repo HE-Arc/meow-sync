@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: '3.13'
-  UV_VERSION: '0.4.0'
+  PYTHON_VERSION: '3.14.3'
+  UV_VERSION: '0.10.4'
 
 jobs:
   install-dependencies:
