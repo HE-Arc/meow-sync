@@ -86,7 +86,9 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: |
+          npm ci
+          npx playwright install --with-deps
 
       - name: Run e2e tests
         working-directory: frontend
