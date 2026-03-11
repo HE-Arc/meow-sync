@@ -30,9 +30,9 @@ class YoutubeApi(ApiInterface):
         return ApiSong(
             song_id=apiSong['id'],
             title=apiSong['snippet']['title'],
-            artist=apiSong['snippet']['channelTitle'],
+            artist=apiSong['snippet']['videoOwnerChannelTitle'],
             image_url=apiSong['snippet']['thumbnails']['default']['url'] if apiSong['snippet']['thumbnails'] and apiSong['snippet']['thumbnails']['default'] else None,
-            release_date=apiSong['snippet']['publishedAt'],
+            release_date=apiSong['contentDetails']['videoPublishedAt'],
             duration_ms=0  # Too much work for too low utility
         )
     
@@ -73,7 +73,7 @@ class YoutubeApi(ApiInterface):
         )
     
     def _get_playlist_info(self, playlist_id: str) -> ApiResponse:
-        response = requests.get(f"{self.API_BASE_URL}/playlists?part=snippet&id={playlist_id}", headers=self.HEADERS)
+        response = requests.get(f"{self.API_BASE_URL}/playlists?part=snippet,contentDetails&maxResults=50&id={playlist_id}", headers=self.HEADERS)
 
         # Invalid JSON error
         try:
@@ -93,35 +93,42 @@ class YoutubeApi(ApiInterface):
         )
 
     def get_playlist(self, playlist_id: Any) -> ApiResponse[ApiPlaylist]:
-        response = requests.get(f"{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}", headers=self.HEADERS)
-
+        song_page_url = f"{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}"
         playlist_info = self._get_playlist_info(playlist_id)
         result = playlist_info.data
 
         # Invalid JSON error
-        try:
-            data = response.json()
-        except:
-            return ApiResponse[list[ApiPlaylist]](
-                success=False,
-                message="Error parsing response JSON",
-                status_code=response.status_code,
-                data=response.text
-            )
-
-        # Spotify API error
-        if response.status_code != 200:
-            return ApiResponse[list[ApiPlaylist]](
-                success=False,
-                message=data['error']['message'],
-                status_code=response.status_code,
-                data=[]
-            )
-
-        # Happy case
+        
         songs: list[ApiSong] = []
-        for song in data['items']:
-            songs.append(self._parse_song(song))
+        next_page_token = ""
+        while True:
+            response = requests.get(song_page_url + next_page_token, headers=self.HEADERS)
+            try:
+                data = response.json()
+            except:
+                return ApiResponse[list[ApiPlaylist]](
+                    success=False,
+                    message="Error parsing response JSON",
+                    status_code=response.status_code,
+                    data=response.text
+                )
+
+            # Spotify API error
+            if response.status_code != 200:
+                return ApiResponse[list[ApiPlaylist]](
+                    success=False,
+                    message=data['error']['message'],
+                    status_code=response.status_code,
+                    data=[]
+                )
+
+            # Happy case
+            for song in data['items']:
+                songs.append(self._parse_song(song))
+
+            if not data.get('nextPageToken'):
+                break
+            next_page_token = f"&pageToken={data['nextPageToken']}"
 
         result.songs = songs
         
