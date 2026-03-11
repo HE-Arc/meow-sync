@@ -1,3 +1,8 @@
 from django.contrib import admin  # noqa: F401
-from django.contrib.auth.admin import UserAdmin
+from .models import *
 
+admin.site.register(OAuthConnection)
+admin.site.register(OAuthState)
+admin.site.register(PlaylistSynchronization)
+admin.site.register(SongIdTranslation)
+admin.site.register(UserPlaylist)

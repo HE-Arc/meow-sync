@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
 	'rest_framework',
+	'rest_framework.authtoken', # for JWT auth
 	'meow_sync_app',
 	'django.contrib.admin',
 	'django.contrib.auth',
