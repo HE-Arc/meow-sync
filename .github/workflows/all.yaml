@@ -20,13 +20,13 @@ env:
 
 jobs:
   django-ci:
-    uses: ./.github/workflows/reusables/django-ci.yaml
+    uses: ./.github/workflows/reusable-django-ci.yaml
 
   vue-ci:
-    uses: ./.github/workflows/reusables/vue-ci.yaml
+    uses: ./.github/workflows/reusable-vue-ci.yaml
 
   deployment:
-    uses: ./.github/workflows/reusables/cd.yaml
+    uses: ./.github/workflows/reusable-cd.yaml
     needs: [django-ci, vue-ci]
     if: ${{ github.ref == 'refs/heads/main' }}
 
