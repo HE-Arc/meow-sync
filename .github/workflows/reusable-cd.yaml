@@ -6,4 +6,11 @@ on:
 
 jobs:
   hello:
-    run: echo "Hello"
+    name: Hello
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Say hello
+        run: echo "Hello"
+
+
