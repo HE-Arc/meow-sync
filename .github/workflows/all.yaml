@@ -1,0 +1,32 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: '3.14.3'
+  UV_VERSION: '0.10.4'
+
+
+jobs:
+  django-ci:
+    uses: ./.github/workflows/reusables/django-ci.yaml
+
+  vue-ci:
+    uses: ./.github/workflows/reusables/vue-ci.yaml
+
+  deployment:
+    uses: ./.github/workflows/reusables/cd.yaml
+    needs: [django-ci, vue-ci]
+    if: ${{ github.ref == 'refs/heads/main' }}
+
