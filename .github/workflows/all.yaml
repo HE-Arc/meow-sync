@@ -28,5 +28,5 @@ jobs:
   deployment:
     uses: ./.github/workflows/reusable-cd.yaml
     needs: [django-ci, vue-ci]
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/19-create-cd-pipeline' }}
 
