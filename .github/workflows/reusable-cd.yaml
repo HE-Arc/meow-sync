@@ -37,11 +37,12 @@ jobs:
               fi
 
       - name: Copy new files
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        uses: milanmk/actions-file-deployer@1.17
         with:
-          username: ${{ env.SSH_USERNAME }}
-          server: ${{ env.SSH_HOST }}
-          port: ${{ env.SSH_PORT }}
+          remote-protocol: sftp
+          remote-user: ${{ env.SSH_USERNAME }}
+          remote-host: ${{ env.SSH_HOST }}
+          remote-port: ${{ env.SSH_PORT }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           local_path: api/
           remote_path: '/home/django/project/api'
@@ -87,11 +88,12 @@ jobs:
         run: npm run build
 
       - name: Copy new files
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        uses: milanmk/actions-file-deployer@1.17
         with:
-          username: ${{ env.SSH_USERNAME }}
-          server: ${{ env.SSH_HOST }}
-          port: ${{ env.SSH_PORT }}
+          remote-protocol: sftp
+          remote-user: ${{ env.SSH_USERNAME }}
+          remote-host: ${{ env.SSH_HOST }}
+          remote-port: ${{ env.SSH_PORT }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           local_path: frontend/dist
           remote_path: '/home/django/project/frontend'
