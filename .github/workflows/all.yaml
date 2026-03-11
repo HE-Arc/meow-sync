@@ -24,4 +24,6 @@ jobs:
     uses: ./.github/workflows/reusable-cd.yaml
     needs: [django-ci, vue-ci]
     if: github.ref == 'refs/pull/21/merge'
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 

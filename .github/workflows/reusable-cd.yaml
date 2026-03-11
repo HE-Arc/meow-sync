@@ -2,7 +2,9 @@ name: "Deploy to production"
 
 on:
   workflow_call:
-
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
 
 env:
   SSH_HOST: 157.26.64.211
