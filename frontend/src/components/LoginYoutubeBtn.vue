@@ -6,7 +6,7 @@ const backend_url: string = import.meta.env.VUE_APP_API_URL ?? ""
 
 <template>
   <div>
-    <a :href="backend_url + '/login/youtube'">Log In with YouTube</a>
+    <a :href="`${backend_url}/login/youtube`">Log In with YouTube</a>
   </div>
 </template>
 
