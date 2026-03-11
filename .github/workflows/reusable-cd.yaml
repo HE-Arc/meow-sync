@@ -31,7 +31,10 @@ jobs:
             envs: SHA
             script: |
               PID=$(pgrep uv)
-              kill $PID
+              if [[ $PID ]]
+              then
+                kill $PID
+              fi
 
       - name: Copy new files
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
@@ -76,6 +79,7 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: npm CI
+        working-directory: frontend
         run: npm ci
 
       - name: Build frontend
