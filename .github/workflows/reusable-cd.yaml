@@ -4,12 +4,89 @@ on:
   workflow_call:
 
 
+env:
+  SSH_HOST: 157.26.64.211
+  SSH_PORT: 31006
+  SSH_USERNAME: django
+  NODE_VERSION: '24'
+
 jobs:
-  hello:
-    name: Hello
+  deploy_backend:
+    name: Deploy backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
-      - name: Say hello
-        run: echo "Hello"
+      - name: Kill backend process
+        uses: appleboy/ssh-action@v1
+        env:
+            SHA: ${{ github.sha }}
+        with:
+            host: ${{ env.SSH_HOST }}
+            port: ${{ env.SSH_PORT }}
+            username: ${{ env.SSH_USERNAME }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            envs: SHA
+            script: |
+              PID=$(pgrep uv)
+              kill $PID
+
+      - name: Copy new files
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          username: ${{ env.SSH_USERNAME }}
+          server: ${{ env.SSH_HOST }}
+          port: ${{ env.SSH_PORT }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          local_path: api/
+          remote_path: '/home/django/project/api'
+
+      - name: Restart service
+        uses: appleboy/ssh-action@v1
+        env:
+            SHA: ${{ github.sha }}
+        with:
+            host: ${{ env.SSH_HOST }}
+            port: ${{ env.SSH_PORT }}
+            username: ${{ env.SSH_USERNAME }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            envs: SHA
+            script: |
+              cd /home/django/project/api
+              uv sync
+              sudo systemctl restart hypercorn
+
+  deploy_frontend:
+    name: Deploy frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore node_modules from cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: npm CI
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Copy new files
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          username: ${{ env.SSH_USERNAME }}
+          server: ${{ env.SSH_HOST }}
+          port: ${{ env.SSH_PORT }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          local_path: frontend/dist
+          remote_path: '/home/django/project/frontend'
+
