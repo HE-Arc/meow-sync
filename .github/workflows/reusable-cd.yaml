@@ -4,3 +4,6 @@ on:
   workflow_call:
 
 
+jobs:
+  hello:
+    run: echo "Hello"
