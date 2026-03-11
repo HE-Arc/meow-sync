@@ -13,11 +13,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  PYTHON_VERSION: '3.14.3'
-  UV_VERSION: '0.10.4'
-
-
 jobs:
   django-ci:
     uses: ./.github/workflows/reusable-django-ci.yaml
