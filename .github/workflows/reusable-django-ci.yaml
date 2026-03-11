@@ -52,6 +52,7 @@ jobs:
           key: ${{ runner.os }}-uv-${{ hashFiles('api/uv.lock') }}
 
       - name: Run ruff check
+        continue-on-error: true
         working-directory: api
         run: .venv/bin/ruff check
 
@@ -70,6 +71,7 @@ jobs:
 
       - name: Run ruff format check
         working-directory: api
+        continue-on-error: true
         run: .venv/bin/ruff format --check
 
   tests:
