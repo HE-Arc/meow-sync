@@ -1,16 +1,6 @@
 name: "Frontend: Run unit tests, type checks and lint tests"
 on:
-  pull_request:
-    paths:
-      - frontend/**
-      - .github/workflows/vue-ci.yaml
-    branches:
-      - main
-      - develop
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 
 env:

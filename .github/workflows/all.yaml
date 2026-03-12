@@ -1,0 +1,29 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  django-ci:
+    uses: ./.github/workflows/reusable-django-ci.yaml
+
+  vue-ci:
+    uses: ./.github/workflows/reusable-vue-ci.yaml
+
+  deployment:
+    uses: ./.github/workflows/reusable-cd.yaml
+    needs: [django-ci, vue-ci]
+    if: always() && github.ref == 'refs/heads/main'
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+

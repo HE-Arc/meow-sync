@@ -1,0 +1,107 @@
+name: "Deploy to production"
+
+on:
+  workflow_call:
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+
+env:
+  SSH_HOST: 157.26.64.211
+  SSH_PORT: 31006
+  SSH_USERNAME: django
+  NODE_VERSION: '24'
+
+jobs:
+  deploy_backend:
+    name: Deploy backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+
+      - name: Kill backend process
+        uses: appleboy/ssh-action@v1
+        env:
+            SHA: ${{ github.sha }}
+        with:
+            host: ${{ env.SSH_HOST }}
+            port: ${{ env.SSH_PORT }}
+            username: ${{ env.SSH_USERNAME }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            envs: SHA
+            script: |
+              PID=$(pgrep uv)
+              if [[ $PID ]]
+              then
+                kill $PID
+              fi
+
+      - name: Copy new files
+        uses: appleboy/scp-action@v1
+        with:
+          username: ${{ env.SSH_USERNAME }}
+          host: ${{ env.SSH_HOST }}
+          port: ${{ env.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: api/*
+          target: /home/django/project/api
+          strip_components: 1
+
+      - name: Restart service
+        uses: appleboy/ssh-action@v1
+        env:
+            SHA: ${{ github.sha }}
+        with:
+            host: ${{ env.SSH_HOST }}
+            port: ${{ env.SSH_PORT }}
+            username: ${{ env.SSH_USERNAME }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            envs: SHA
+            script: |
+              cd /home/django/project/api
+              /home/django/.local/bin/uv sync
+              /home/django/.local/bin/uv run manage.py collectstatic --noinput
+              /home/django/.local/bin/uv run manage.py migrate
+              sudo systemctl restart hypercorn
+
+  deploy_frontend:
+    name: Deploy frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore node_modules from cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: npm CI
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Copy new files
+        uses: appleboy/scp-action@v1
+        with:
+          user: ${{ env.SSH_USERNAME }}
+          host: ${{ env.SSH_HOST }}
+          port: ${{ env.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: frontend/dist/*
+          target: /home/django/project/frontend
+          strip_components: 2
+

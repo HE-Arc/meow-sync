@@ -1,17 +1,7 @@
 # Generated using copilot-cli
 name: "API: Run linting checks"
 on:
-  pull_request:
-    paths:
-      - api/**
-      - .github/workflows/api-ci.yaml
-    branches:
-      - main
-      - develop
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 env:
   PYTHON_VERSION: '3.14.3'
