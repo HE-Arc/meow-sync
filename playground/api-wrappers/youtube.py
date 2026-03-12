@@ -3,7 +3,7 @@ import base64
 import requests
 from flask import Flask, json, redirect, request, session, url_for
 from dotenv import load_dotenv
-from YoutubeApi import YoutubeApi
+from YoutubeApi import *
 
 
 load_dotenv()
@@ -143,6 +143,58 @@ def youtube_playlist(playlist_id):
     output += "</table>"
 
     return output
+
+
+@app.route("/youtube/playlist/create", methods=["GET"])
+def youtube_playlist_create():
+    return """
+        <h2>Create Playlist</h2>
+        <form method="POST" action="/youtube/playlist/create">
+            <label>Playlist Name:</label><br>
+            <input type="text" name="playlist_name" required><br><br>
+
+            <label>Playlist Descriptions:</label><br>
+            <input type="text" name="playlist_description"><br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    """
+
+@app.route("/youtube/playlist/create", methods=["POST"])
+def submit_youtube_playlist_create():
+    playlist_name = request.form.get("playlist_name", "").strip()
+    playlist_description = request.form.get("playlist_description", "").strip()
+
+    # --- Simple validation ---
+    if not playlist_name:
+        return "Error: playlist_name is required", 400
+
+    if not playlist_description:
+        return "Error: playlist_description is required", 400
+
+    access_token = session.get("access_token")
+    if not access_token:
+        return redirect("/youtube")
+
+    youtube_api = YoutubeApi(access_token=access_token)
+    response = youtube_api.create_playlist(ApiPlaylist(
+        title=playlist_name,
+        description=playlist_description,
+        author="",
+        image_url=None,
+        playlist_id=None,
+        songs=None
+        ))
+
+    return f"""
+        <h2>status: {response.status_code}</h2>
+        <h2>success: {response.success}</h2>
+        <h2>message: {response.message}</h2>
+        <hr>
+        <h2>id: {response.data.id}</h2>
+        <h2>author: {response.data.author}</h2>
+        
+    """
 
 
 if __name__ == "__main__":

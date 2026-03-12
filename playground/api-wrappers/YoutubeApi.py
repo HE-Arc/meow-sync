@@ -51,7 +51,7 @@ class YoutubeApi(ApiInterface):
                 data=response.text
             )
 
-        # Spotify API error
+        # Youtube API error
         if response.status_code != 200:
             return ApiResponse[list[ApiPlaylist]](
                 success=False,
@@ -81,7 +81,7 @@ class YoutubeApi(ApiInterface):
         except:
             raise Exception("Error parsing response JSON")
 
-        # Spotify API error
+        # Youtube API error
         if response.status_code != 200:
             raise Exception(data['error']['message'] if data['error'] and data['error']['message'] else "Youtube Api Error")
         
@@ -113,7 +113,7 @@ class YoutubeApi(ApiInterface):
                     data=response.text
                 )
 
-            # Spotify API error
+            # Youtube API error
             if response.status_code != 200:
                 return ApiResponse[list[ApiPlaylist]](
                     success=False,
@@ -143,5 +143,46 @@ class YoutubeApi(ApiInterface):
         pass
     def remove_from_playlist(self, playlist_id: Any, song_ids: list[Any]) -> ApiResponse:
         pass
-    def create_playlist(self, title: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
-        pass
+    def create_playlist(self, playlist: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
+        PRIVACY_STATUS = "private"
+        response = requests.post(f"{self.API_BASE_URL}/playlists?part=snippet,status", headers=self.HEADERS, json={
+            "snippet": {
+                "title": playlist.title,
+                "description": playlist.description
+            },
+            "status": {
+                "privacyStatus": PRIVACY_STATUS
+            }
+        })
+        # Invalid JSON error
+        try:
+            data = response.json()
+        except:
+            return ApiResponse[list[ApiPlaylist]](
+                success=False,
+                message="Error parsing response JSON",
+                status_code=response.status_code,
+                data=response.text
+            )
+
+        # Youtube API error
+        if response.status_code != 200:
+            return ApiResponse[list[ApiPlaylist]](
+                success=False,
+                message=data['error']['message'],
+                status_code=response.status_code,
+                data=[]
+            )
+        
+        playlist.author = data['snippet']['channelTitle']
+        playlist.id = data['id']
+        playlist.songs = []
+
+        # Happy case
+        return ApiResponse[ApiPlaylist](
+            success=True,
+            message="Successfully created playlist",
+            status_code=response.status_code,
+            data=playlist
+        )
+
