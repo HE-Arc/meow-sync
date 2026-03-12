@@ -40,15 +40,14 @@ jobs:
               fi
 
       - name: Copy new files
-        uses: milanmk/actions-file-deployer@1.17
+        uses: appleboy/scp-action@v1
         with:
-          remote-protocol: sftp
-          remote-user: ${{ env.SSH_USERNAME }}
-          remote-host: ${{ env.SSH_HOST }}
-          remote-port: ${{ env.SSH_PORT }}
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          local_path: api/
-          remote_path: '/home/django/project/api'
+          username: ${{ env.SSH_USERNAME }}
+          host: ${{ env.SSH_HOST }}
+          port: ${{ env.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: api/*
+          target: /home/django/project/api
 
       - name: Restart service
         uses: appleboy/ssh-action@v1
@@ -93,13 +92,12 @@ jobs:
         run: npm run build
 
       - name: Copy new files
-        uses: milanmk/actions-file-deployer@1.17
+        uses: appleboy/scp-action@v1
         with:
-          remote-protocol: sftp
-          remote-user: ${{ env.SSH_USERNAME }}
-          remote-host: ${{ env.SSH_HOST }}
-          remote-port: ${{ env.SSH_PORT }}
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          local_path: frontend/dist
-          remote_path: '/home/django/project/frontend'
+          user: ${{ env.SSH_USERNAME }}
+          host: ${{ env.SSH_HOST }}
+          port: ${{ env.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: frontend/dist/*
+          target: /home/django/project/frontend
 
