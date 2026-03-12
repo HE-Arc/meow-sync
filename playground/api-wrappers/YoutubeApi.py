@@ -28,7 +28,7 @@ class YoutubeApi(ApiInterface):
 
     def _parse_song(self, apiSong: dict) -> ApiSong:
         return ApiSong(
-            song_id=apiSong['id'],
+            song_id=apiSong['snippet']['resourceId']['videoId'],
             title=apiSong['snippet']['title'],
             artist=apiSong['snippet']['videoOwnerChannelTitle'],
             image_url=apiSong['snippet']['thumbnails']['default']['url'] if apiSong['snippet']['thumbnails'] and apiSong['snippet']['thumbnails']['default'] else None,
@@ -139,8 +139,48 @@ class YoutubeApi(ApiInterface):
             data=result
         )
 
-    def add_to_playlist(self, playlist_id: Any, song_ids: list[Any]) -> ApiResponse:
-        pass
+    def add_to_playlist(self, playlist_id: str, song_ids: list[str]) -> ApiResponse[None]:
+        for video_id in song_ids:
+            request_url = f"{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails"
+            
+            request_body = {
+                "snippet": {
+                    "playlistId": playlist_id,
+                    "resourceId": {
+                        "videoId": video_id,
+                        "kind": "youtube#video"
+                    }   
+                }    
+            }
+
+            response = requests.post(request_url, json=request_body, headers=self.HEADERS)
+            
+            try:
+                data = response.json()
+            except:
+                return ApiResponse[None](
+                    success=False,
+                    message="Error parsing response JSON",
+                    status_code=response.status_code,
+                    data=None
+                )
+
+            # Youtube API error
+            if response.status_code != 200:
+                return ApiResponse[None](
+                    success=False,
+                    message=response.text,
+                    status_code=response.status_code,
+                    data=None
+                )
+        
+        return ApiResponse(
+            success=True,
+            message="Successfully added songs to playlist",
+            status_code=response.status_code,
+            data=None
+        )
+    
     def remove_from_playlist(self, playlist_id: Any, song_ids: list[Any]) -> ApiResponse:
         pass
     def create_playlist(self, playlist: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
