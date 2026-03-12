@@ -123,6 +123,7 @@ def youtube_playlist(playlist_id):
             <th>Duration (minutes)</th>
             <th>Artist</th>
             <th>Release Date</th>
+            <th>Id in playlist</th>
         </tr>
     """
 
@@ -137,6 +138,7 @@ def youtube_playlist(playlist_id):
             <td>{song.get_formatted_duration()}</td>
             <td>{song.artist}</td>
             <td>{song.release_date}</td>
+            <td>{song.id_in_playlist}</td>
         </tr>
         """
 
@@ -210,6 +212,59 @@ def youtube_submit_playlist_form_add_songs():
 
     return html_response
     
+
+@app.route("/youtube/playlist/remove-songs", methods=["GET"])
+def youtube_playlist_form_remove_songs():
+    return """
+        <h2>Remove Songs</h2>
+        <form method="POST" action="/youtube/playlist/remove-songs">
+            <label>Song IDs (comma separated):</label><br>
+            <input type="text" name="song_ids" required><br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    """
+
+@app.route("/youtube/playlist/remove-songs", methods=["POST"])
+def youtube_submit_playlist_form_remove_songs():
+    song_ids_raw = request.form.get("song_ids", "").strip()
+
+    # --- Simple validation ---
+    if not song_ids_raw:
+        return "Error: song_ids is required", 400
+
+    # --- Parse comma-separated IDs ---
+    song_ids = [
+        song_id.strip()
+        for song_id in song_ids_raw.split(",")
+        if song_id.strip()
+    ]
+
+    if not song_ids:
+        return "Error: No valid song IDs provided", 400
+    
+    access_token = session.get("access_token")
+    if not access_token:
+        return redirect("/spotify")
+
+    spotify_api = YoutubeApi(access_token=access_token)
+    spotify_api.remove_from_playlist(None, song_ids)
+    
+    # --- Manually build HTML list ---
+    ul_items = ""
+    for song in song_ids:
+        ul_items += f"<li>{song}</li>"
+
+    # --- Build full HTML response ---
+    html_response = f"""
+        <h3>Song IDs:</h3>
+        <ul>
+            {ul_items}
+        </ul>
+    """
+
+    return html_response
+
 
 @app.route("/youtube/playlist/create", methods=["GET"])
 def youtube_playlist_create():

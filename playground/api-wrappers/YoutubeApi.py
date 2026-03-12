@@ -33,7 +33,9 @@ class YoutubeApi(ApiInterface):
             artist=apiSong['snippet']['videoOwnerChannelTitle'],
             image_url=apiSong['snippet']['thumbnails']['default']['url'] if apiSong['snippet']['thumbnails'] and apiSong['snippet']['thumbnails']['default'] else None,
             release_date=apiSong['contentDetails']['videoPublishedAt'],
-            duration_ms=0  # Too much work for too low utility
+            duration_ms=0,  # Too much work for too low utility
+
+            id_in_playlist=apiSong['id']
         )
     
     def get_all_playlists(self) -> ApiResponse[list[ApiPlaylist]]:
@@ -181,8 +183,40 @@ class YoutubeApi(ApiInterface):
             data=None
         )
     
-    def remove_from_playlist(self, playlist_id: Any, song_ids: list[Any]) -> ApiResponse:
-        pass
+
+    def remove_from_playlist(self, playlist_id: str, song_ids: list[str]) -> ApiResponse[None]:
+        for video_id in song_ids:
+            request_url = f"{self.API_BASE_URL}/playlistItems?id={video_id}"
+
+            response = requests.delete(request_url, headers=self.HEADERS)
+            
+            try:
+                data = response.json()
+            except:
+                return ApiResponse[None](
+                    success=False,
+                    message="Error parsing response JSON",
+                    status_code=response.status_code,
+                    data=None
+                )
+
+            # Youtube API error
+            if response.status_code != 204:
+                return ApiResponse[None](
+                    success=False,
+                    message=data['error']['message'],
+                    status_code=response.status_code,
+                    data=None
+                )
+
+        # Happy case
+        return ApiResponse[None](
+            success=True,
+            message="Successfully removed songs from playlist",
+            status_code=204,
+            data=None
+        )
+    
     def create_playlist(self, playlist: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
         PRIVACY_STATUS = "private"
         response = requests.post(f"{self.API_BASE_URL}/playlists?part=snippet,status", headers=self.HEADERS, json={
