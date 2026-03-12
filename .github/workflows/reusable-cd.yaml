@@ -62,7 +62,7 @@ jobs:
             envs: SHA
             script: |
               cd /home/django/project/api
-              uv sync
+              /home/django/.local/bin/uv sync
               sudo systemctl restart hypercorn
 
   deploy_frontend:
