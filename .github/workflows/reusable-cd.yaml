@@ -48,6 +48,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: api/*
           target: /home/django/project/api
+          strip_components: true
 
       - name: Restart service
         uses: appleboy/ssh-action@v1
@@ -100,4 +101,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: frontend/dist/*
           target: /home/django/project/frontend
+          strip_components: true
 
