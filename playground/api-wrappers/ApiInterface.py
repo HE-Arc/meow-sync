@@ -3,13 +3,17 @@ from typing import Any, Generic, TypeVar
 T = TypeVar("T")
 
 class ApiSong:
-    def __init__(self, song_id, title: str, artist: str, image_url: str|None, release_date: str, duration_ms: int):
+    def __init__(self, song_id, title: str, artist: str, image_url: str|None, release_date: str, duration_ms: int, id_in_playlist: str|None = None):
         self.id = song_id
         self.title: str = title
         self.artist: str = artist
         self.image_url: str|None = image_url
         self.release_date: str = release_date
         self.duration_ms: int = duration_ms
+
+        # Specific to delete a video in a Youtube playlist, a new id is created when a video is added to a playlist.
+        # So we need to keep track of it if we want to delete the video from the playlist later
+        self.id_in_playlist: str = id_in_playlist 
     
     def get_formatted_duration(self):
         total_seconds = self.duration_ms // 1000
