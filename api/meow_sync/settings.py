@@ -19,6 +19,13 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+def env_to_list(env_name: str, default_values: list[str]) -> list[str]:
+    raw_value = os.getenv(env_name, None)
+    if raw_value is None:
+        return default_values
+    
+    return [s.strip() for s in raw_value.split(',')]
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -29,9 +36,11 @@ SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-6i6x@*#$nxy7f_k(vwo3t28php6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True if os.getenv('DEBUG', 'True').lower() == 'true' else False
 
-ALLOWED_HOSTS = [
-    os.getenv('ALLOWED_HOST', 'localhost:8000')
-]
+ALLOWED_HOSTS = env_to_list('ALLOWED_HOSTS', ["localhost:8000/", "127.0.0.1:8000/"])
+
+CORS_ALLOWED_ORIGINS = env_to_list('CORS_ALLOWED_ORIGINS', ["http://localhost:5173/", "http://127.0.0.1:5173/"])
+
+CSRF_TRUSTED_ORIGINS = env_to_list('CSRF_TRUSTED_ORIGINS', ["http://localhost:5173/", "http://127.0.0.1:5173/"])
 
 
 # Application definition
