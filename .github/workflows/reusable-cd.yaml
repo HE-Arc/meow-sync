@@ -63,7 +63,8 @@ jobs:
             script: |
               cd /home/django/project/api
               /home/django/.local/bin/uv sync
-              /home/django/.local/bin/uv run manage.py collectstatic
+              /home/django/.local/bin/uv run manage.py collectstatic --noinput
+              /home/django/.local/bin/uv run manage.py migrate
               sudo systemctl restart hypercorn
 
   deploy_frontend:
