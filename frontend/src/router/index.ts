@@ -1,3 +1,4 @@
+import LoginCallback from "@/views/LoginCallback.vue";
 import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "../views/HomeView.vue";
 
@@ -8,6 +9,11 @@ const router = createRouter({
 			path: "/",
 			name: "home",
 			component: HomeView,
+		},
+		{
+			path: "/login_callback",
+			name: "login_callback",
+			component: LoginCallback,
 		},
 		{
 			path: "/about",

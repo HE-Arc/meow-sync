@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import {
   ProvidersInformations,
-  type SyncProvider,
+  type SyncProviderInformation,
 } from "@/types/SyncProviders";
 
-function redirectTo(syncProvider: SyncProvider) {
-  window.location.href = ProvidersInformations[syncProvider].backendRoute;
+function redirectTo(syncProvider: SyncProviderInformation) {
+  window.location.href = syncProvider.backendRoute;
 }
 </script>
 
@@ -16,14 +16,16 @@ function redirectTo(syncProvider: SyncProvider) {
       Your ultimate playlist synchronization tool.
     </p>
     <div class="flex space-x-4 flex-col gap-2 items-center justify-center">
-      <button
+      <UButton
         type="button"
+        :icon="syncProvider.icon"
         v-for="syncProvider in ProvidersInformations"
-        class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        @click="redirectTo(syncProvider)"
+        class="text-white rounded-lg hover:bg-primary-dark transition-colors"
         :style="{ backgroundColor: syncProvider.color }"
       >
         Login with {{ syncProvider.name }}
-      </button>
+      </UButton>
     </div>
   </main>
 </template>

@@ -1,10 +1,12 @@
+const API_URL = import.meta.env.VITE_API_URL;
+
 export const SyncProviders = ["spotify", "youtube_music"] as const;
 export type SyncProvider = (typeof SyncProviders)[number];
 
-type SyncProviderInformation = {
+export type SyncProviderInformation = {
 	backendRoute: string;
 	color: string;
-	logoName: string;
+	icon: string;
 	name: string;
 };
 
@@ -13,15 +15,15 @@ export const ProvidersInformations: Record<
 	SyncProviderInformation
 > = {
 	spotify: {
-		backendRoute: "/auth/spotify",
+		backendRoute: `${API_URL}/auth/spotify`,
 		color: "#1DB954",
-		logoName: "spotify",
+		icon: "mdi:spotify",
 		name: "Spotify",
 	},
 	youtube_music: {
-		backendRoute: "/auth/youtube_music",
+		backendRoute: `${API_URL}/auth/youtube_music`,
 		color: "#FF0000",
-		logoName: "youtube_music",
+		icon: "mdi:youtube",
 		name: "YouTube Music",
 	},
 };
