@@ -16,14 +16,19 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.db import router
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from meow_sync_app import views
+from user_playlist.views import UserPlaylistViewSet
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+router = DefaultRouter()
+router.register(r'playlists', UserPlaylistViewSet, basename='playlist')
 
 urlpatterns = [
 	path('admin/', admin.site.urls),
-    path ('playlist/create', views.addUserPlaylist),
-    path ('playlist/read/<str:pk>', views.getUserPlaylist),
-    path ('playlist/update/<str:pk>', views.updateUserPlaylist),
-    path ('playlist/delete/<str:pk>', views.deleteUserPlaylist),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/', include(router.urls)),
 ]

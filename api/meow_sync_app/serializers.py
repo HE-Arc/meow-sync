@@ -7,7 +7,3 @@ from .models import *
 #     class Meta:
 #         model = User
 #         fields = ["url", "username", "email", "groups"]
-class UserPlaylistSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserPlaylist
-        fields = '__all__'
