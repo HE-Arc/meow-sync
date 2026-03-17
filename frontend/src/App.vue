@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from "vue-router";
-import HelloWorld from "./components/HelloWorld.vue";
+import AppIconWithText from "./components/icons/AppIconWithText.vue";
 </script>
 
 <template>
@@ -8,7 +8,9 @@ import HelloWorld from "./components/HelloWorld.vue";
     <UApp>
       <UHeader>
         <template #left>
-          <RouterLink to="/">App logo</RouterLink>
+          <RouterLink to="/">
+            <AppIconWithText />
+          </RouterLink>
         </template>
       </UHeader>
 
@@ -18,7 +20,7 @@ import HelloWorld from "./components/HelloWorld.vue";
 
       <UFooter>
         <p class="text-center text-sm text-gray-500">
-          &copy; 2024 Meow Sync. All rights reserved.
+          &copy; {{ new Date().getFullYear() }} Meow Sync. All rights reserved.
         </p>
       </UFooter>
     </UApp>
