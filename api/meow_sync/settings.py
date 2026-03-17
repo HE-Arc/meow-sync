@@ -48,6 +48,7 @@ CSRF_TRUSTED_ORIGINS = env_to_list('CSRF_TRUSTED_ORIGINS', ["http://localhost:51
 INSTALLED_APPS = [
 	'rest_framework',
 	'rest_framework.authtoken', # for JWT auth
+	'drf_spectacular',
 	'meow_sync_app',
 	'django.contrib.admin',
 	'django.contrib.auth',
@@ -138,3 +139,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'static'
+
+REST_FRAMEWORK = {
+	'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+	'TITLE': 'Meow Sync API',
+	'DESCRIPTION': 'API for synchronizing playlists across music providers.',
+	'VERSION': '1.0.0',
+}
