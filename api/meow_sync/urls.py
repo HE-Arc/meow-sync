@@ -18,6 +18,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from meow_sync_app import views
+
 urlpatterns = [
 	path('admin/', admin.site.urls),
+    path ('playlist/create', views.addUserPlaylist),
+    path ('playlist/read/<str:pk>', views.getUserPlaylist),
+    path ('playlist/update/<str:pk>', views.updateUserPlaylist),
+    path ('playlist/delete/<str:pk>', views.deleteUserPlaylist),
 ]
