@@ -36,7 +36,7 @@ SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-6i6x@*#$nxy7f_k(vwo3t28php6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True if os.getenv('DEBUG', 'True').lower() == 'true' else False
 
-ALLOWED_HOSTS = env_to_list('ALLOWED_HOSTS', ["localhost:8000/", "127.0.0.1:8000/"])
+ALLOWED_HOSTS = env_to_list('ALLOWED_HOSTS', ["localhost", "127.0.0.1"])
 
 CORS_ALLOWED_ORIGINS = env_to_list('CORS_ALLOWED_ORIGINS', ["http://localhost:5173/", "http://127.0.0.1:5173/"])
 
