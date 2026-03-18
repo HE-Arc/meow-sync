@@ -104,7 +104,7 @@ loadPlaylist();
               Description
             </p>
             <p
-              class="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed break-words"
+              class="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed wrap-break-word"
             >
               {{ playlistData.description || "No description provided" }}
             </p>

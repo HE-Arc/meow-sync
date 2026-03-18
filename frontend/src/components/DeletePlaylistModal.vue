@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useToast } from "@nuxt/ui/runtime/composables/useToast.js";
 import { ref } from "vue";
 import { deletePlaylist, type PlaylistWithId } from "@/api/Playlist";
 
@@ -15,7 +16,7 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const toast = useToast?.();
+const toast = useToast();
 const isDeleting = ref(false);
 
 async function handleDelete() {

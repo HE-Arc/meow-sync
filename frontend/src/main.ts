@@ -1,9 +1,9 @@
 import "./assets/main.css";
 
+import ui from "@nuxt/ui/vue-plugin";
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
-import ui from "@nuxt/ui/vue-plugin";
 
 const app = createApp(App);
 

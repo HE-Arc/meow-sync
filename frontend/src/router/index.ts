@@ -5,7 +5,7 @@ import PlaylistDetailsView from "@/views/playlists/PlaylistDetailsView.vue";
 import PlaylistsView from "@/views/playlists/PlaylistsView.vue";
 import HomeView from "../views/HomeView.vue";
 
-function isAuthenticated(): boolean {
+function _isAuthenticated(): boolean {
 	const token = localStorage.getItem("token");
 	return !!token;
 }
