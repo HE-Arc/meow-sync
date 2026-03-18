@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { FormSubmitEvent } from "@nuxt/ui";
 import { type Ref, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import * as z from "zod";
 import {
   createPlaylist,
   getPlaylistById,
@@ -13,20 +15,46 @@ import { SyncProviders } from "@/types/SyncProviders";
 
 const props = defineProps<{
   isEditMode?: boolean;
-  id?: string;
 }>();
 
-const isLoading = ref(true);
-const toast = useToast?.();
+const route = useRoute();
+const playlistId = route.params.id as number | undefined;
 
-const state: Ref<Playlist> = ref({
+const schema = z.object({
+  playlist_id: z
+    .string("Playlist ID must be a string")
+    .min(3, "Playlist ID cannot be less than 3 characters"),
+  provider: z.enum(
+    SyncProviders,
+    "Provider must be either 'spotify' or 'youtube'",
+  ),
+  author: z
+    .string("Author must be a string")
+    .min(3, "Author name cannot be less than 3 characters"),
+  user: z.number("User ID must be a number"), //TODO: Remove this when login works
+  title: z
+    .string("Title must be a string")
+    .min(3, "Title cannot be less than 3 characters"),
+  description: z.string("Description must be a string").nullable(),
+
+  img_url: z.url("Image URL must be a valid URL").nullable(),
+});
+
+type PlaylistForm = z.infer<typeof schema>;
+
+const isLoading = ref(true);
+const toast = useToast();
+const router = useRouter();
+
+const state: Ref<PlaylistForm> = ref({
   playlist_id: "",
   provider: "spotify",
   title: "",
   description: null,
   author: "",
+  user: 1,
   img_url: null,
-} as Playlist);
+} as PlaylistForm);
 
 const providers = ref(
   SyncProviders.map((provider) => ({
@@ -36,9 +64,9 @@ const providers = ref(
 );
 
 async function loadPlaylist() {
-  if (props.isEditMode && props.id) {
+  if (props.isEditMode && playlistId) {
     try {
-      const data = await getPlaylistById(props.id);
+      const data = await getPlaylistById(playlistId);
       state.value = data;
     } catch (error) {
       console.error("Failed to load playlist:", error);
@@ -47,19 +75,22 @@ async function loadPlaylist() {
   isLoading.value = false;
 }
 
-async function submit(_event: FormSubmitEvent<Playlist>) {
+async function submit(_event: FormSubmitEvent<PlaylistForm>) {
   try {
-    if (props.isEditMode && props.id) {
-      await updatePlaylist(props.id, state.value);
+    if (props.isEditMode && playlistId) {
+      await updatePlaylist(playlistId, state.value as Playlist);
     } else {
-      await createPlaylist(state.value);
+      await createPlaylist(state.value as Playlist);
     }
+
     toast?.add({
       title: props.isEditMode
         ? "Playlist updated successfully"
         : "Playlist created successfully",
       color: "green",
     });
+
+    router.push("/playlists");
   } catch (error) {
     console.error("Failed to submit playlist:", error);
     toast?.add({
@@ -89,10 +120,12 @@ loadPlaylist();
       <div
         class="bg-white dark:bg-slate-900 rounded-lg shadow-lg dark:shadow-xl p-8"
       >
-        <h1 class="text-3xl font-bold mb-2 text-slate-900 dark:text-slate-50">
+        <h1
+          class="text-3xl font-bold mb-2 text-slate-900 dark:text-slate-50 text-center"
+        >
           {{ props.isEditMode ? "Edit Playlist" : "Create New Playlist" }}
         </h1>
-        <p class="text-slate-500 dark:text-slate-400 mb-8">
+        <p class="text-slate-500 dark:text-slate-400 mb-8 text-center">
           {{
             props.isEditMode
               ? "Update your playlist details"
@@ -101,12 +134,16 @@ loadPlaylist();
         </p>
 
         <UForm
-          :schema="PlaylistSchema"
+          :schema="schema"
           :state="state"
           @submit="submit"
-          class="space-y-6"
+          class="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
-          <UFormField label="Playlist ID" name="playlist_id" class="space-y-2">
+          <UFormField
+            label="Playlist ID"
+            name="playlist_id"
+            class="space-y-2 md:col-span-2"
+          >
             <UInput
               v-model="state.playlist_id"
               :disabled="props.isEditMode"
@@ -116,7 +153,11 @@ loadPlaylist();
             />
           </UFormField>
 
-          <UFormField label="Title" name="title" class="space-y-2">
+          <UFormField
+            label="Title"
+            name="title"
+            class="space-y-2 md:col-span-2"
+          >
             <UInput
               v-model="state.title"
               placeholder="Enter playlist title"
@@ -134,7 +175,21 @@ loadPlaylist();
             />
           </UFormField>
 
-          <UFormField label="Description" name="description" class="space-y-2">
+          <UFormField label="User ID" name="user" class="space-y-2">
+            <UInput
+              v-model="state.user"
+              type="number"
+              placeholder="Enter user ID"
+              size="lg"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Description"
+            name="description"
+            class="space-y-2 md:col-span-2"
+          >
             <UTextarea
               :model-value="state.description ?? ''"
               @update:model-value="state.description = $event || null"
@@ -144,7 +199,11 @@ loadPlaylist();
             />
           </UFormField>
 
-          <UFormField label="Provider" name="provider" class="space-y-2">
+          <UFormField
+            label="Provider"
+            name="provider"
+            class="space-y-2 md:col-span-2"
+          >
             <USelect
               v-model="state.provider"
               :items="providers"
@@ -154,7 +213,11 @@ loadPlaylist();
             />
           </UFormField>
 
-          <UFormField label="Image URL" name="img_url" class="space-y-2">
+          <UFormField
+            label="Image URL"
+            name="img_url"
+            class="space-y-2 md:col-span-2"
+          >
             <UInput
               :model-value="state.img_url ?? ''"
               @update:model-value="state.img_url = $event || null"
@@ -164,7 +227,7 @@ loadPlaylist();
             />
           </UFormField>
 
-          <div class="flex gap-3 pt-2">
+          <div class="md:col-span-2 flex gap-3 pt-2">
             <UButton
               type="submit"
               color="primary"

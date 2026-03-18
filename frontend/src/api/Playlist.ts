@@ -1,24 +1,28 @@
 import * as z from "zod";
+import { SyncProviders } from "@/types/SyncProviders";
 
 export const PlaylistSchema = z.object({
+	id: z.number("ID must be a number"),
 	playlist_id: z
 		.string("Playlist ID must be a string")
-		.min(8, "Playlist ID cannot be less than 8 characters"),
+		.min(3, "Playlist ID cannot be less than 3 characters"),
 	provider: z.enum(
-		["spotify", "youtube"],
+		SyncProviders,
 		"Provider must be either 'spotify' or 'youtube'",
 	),
 	title: z
 		.string("Title must be a string")
-		.min(8, "Title cannot be less than 8 characters"),
+		.min(3, "Title cannot be less than 3 characters"),
 	description: z.string("Description must be a string").nullable(),
 	author: z.string("Author must be a string"),
-	img_url: z.string("Image URL must be a string").nullable(),
+	user: z.number("User ID must be a number"),
+	img_url: z.string().nullable(),
 });
 
-export type Playlist = z.infer<typeof PlaylistSchema>;
+export type Playlist = Omit<PlaylistWithId, "id">;
+export type PlaylistWithId = z.infer<typeof PlaylistSchema>;
 
-const PLAYLIST_BASE_URL = `${import.meta.env.VITE_API_URL}/playlists`;
+const PLAYLIST_BASE_URL = `${import.meta.env.VITE_API_URL}/api/playlists`;
 
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
 	const token = localStorage.getItem("token");
@@ -28,7 +32,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
 	const headers = {
 		...options.headers,
-		Authorization: `Bearer ${token}`,
+		//Authorization: `Bearer ${token}`, //TODO: Re-enable this when the backend is ready to accept the token
 	};
 	const response = await fetch(url, {
 		...options,
@@ -42,8 +46,8 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 	return response;
 }
 
-export async function createPlaylist(data: Playlist): Promise<Playlist> {
-	const response = await fetchWithAuth(PLAYLIST_BASE_URL, {
+export async function createPlaylist(data: Playlist): Promise<PlaylistWithId> {
+	const response = await fetchWithAuth(`${PLAYLIST_BASE_URL}/`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -55,7 +59,7 @@ export async function createPlaylist(data: Playlist): Promise<Playlist> {
 	return PlaylistSchema.parse(responseData);
 }
 
-export async function getPlaylists(): Promise<Playlist[]> {
+export async function getPlaylists(): Promise<PlaylistWithId[]> {
 	const response = await fetchWithAuth(PLAYLIST_BASE_URL);
 	if (!response.ok) {
 		throw new Error("Failed to fetch playlists");
@@ -64,8 +68,10 @@ export async function getPlaylists(): Promise<Playlist[]> {
 	return z.array(PlaylistSchema).parse(responseData);
 }
 
-export async function getPlaylistById(playlistId: string): Promise<Playlist> {
-	const response = await fetchWithAuth(`${PLAYLIST_BASE_URL}/${playlistId}`);
+export async function getPlaylistById(
+	playlistId: number,
+): Promise<PlaylistWithId> {
+	const response = await fetchWithAuth(`${PLAYLIST_BASE_URL}/${playlistId}/`);
 	if (!response.ok) {
 		throw new Error("Failed to fetch playlist");
 	}
@@ -73,8 +79,8 @@ export async function getPlaylistById(playlistId: string): Promise<Playlist> {
 	return PlaylistSchema.parse(responseData);
 }
 
-export async function deletePlaylist(playlistId: string): Promise<void> {
-	const response = await fetchWithAuth(`${PLAYLIST_BASE_URL}/${playlistId}`, {
+export async function deletePlaylist(playlistId: number): Promise<void> {
+	const response = await fetchWithAuth(`${PLAYLIST_BASE_URL}/${playlistId}/`, {
 		method: "DELETE",
 	});
 	if (!response.ok) {
@@ -83,10 +89,10 @@ export async function deletePlaylist(playlistId: string): Promise<void> {
 }
 
 export async function updatePlaylist(
-	playlistId: string,
+	playlistId: number,
 	data: Partial<Playlist>,
-): Promise<Playlist> {
-	const response = await fetchWithAuth(`${PLAYLIST_BASE_URL}/${playlistId}`, {
+): Promise<PlaylistWithId> {
+	const response = await fetchWithAuth(`${PLAYLIST_BASE_URL}/${playlistId}/`, {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",

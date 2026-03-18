@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
 import LoginCallback from "@/views/LoginCallback.vue";
 import NewPlaylistView from "@/views/playlists/NewPlaylistView.vue";
-import PlaylistsView from "@/views/playlists/PlaylistDetailsView.vue";
 import PlaylistDetailsView from "@/views/playlists/PlaylistDetailsView.vue";
+import PlaylistsView from "@/views/playlists/PlaylistsView.vue";
 import HomeView from "../views/HomeView.vue";
 
 function isAuthenticated(): boolean {
@@ -26,13 +26,13 @@ const router = createRouter({
 		{
 			path: "/playlists",
 			name: "playlists",
-			beforeEnter: (to, from, next) => {
+			/*beforeEnter: (_to, _from, next) => {
 				if (!isAuthenticated()) {
 					next({ name: "home" });
 				} else {
 					next();
 				}
-			},
+			},*/ // TODO: Re-enable this when the backend is ready to accept the token
 			props: true,
 			children: [
 				{
@@ -49,6 +49,7 @@ const router = createRouter({
 				{
 					path: ":id",
 					name: "playlist_details",
+					props: true,
 					component: PlaylistDetailsView,
 				},
 				{
