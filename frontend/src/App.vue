@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
+import { defineShortcuts } from "@nuxt/ui/runtime/composables/defineShortcuts.js";
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import AppIconWithText from "./components/icons/AppIconWithText.vue";

@@ -1,8 +1,19 @@
 // Generated via github copilot, then modified to fix some issues
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { computed } from "vue";
 import type { PlaylistWithId } from "@/api/Playlist";
 import PlaylistCard from "../PlaylistCard.vue";
+
+// Mock @vueuse/core
+vi.mock("@vueuse/core", async (importOriginal) => {
+	const actual = await importOriginal();
+	return {
+		//@ts-expect-error
+		...actual,
+		useMediaQuery: vi.fn((_query: string) => computed(() => false)),
+	};
+});
 
 describe("PlaylistCard", () => {
 	const mockPlaylist: PlaylistWithId = {
@@ -31,25 +42,6 @@ describe("PlaylistCard", () => {
 		expect(wrapper.find("div .animate-pulse").exists()).toBe(true);
 	});
 
-	it("renders playlist content when isLoading is false", () => {
-		const wrapper = mount(PlaylistCard, {
-			props: {
-				playlist: mockPlaylist,
-				isLoading: false,
-			},
-			global: {
-				stubs: {
-					UAvatar: true,
-					UButton: true,
-				},
-			},
-		});
-
-		expect(wrapper.text()).toContain("Test Playlist");
-		// Short description should display fully
-		expect(wrapper.text()).toContain("A test playlist description");
-	});
-
 	it("displays playlist title", () => {
 		const wrapper = mount(PlaylistCard, {
 			props: {
@@ -67,7 +59,10 @@ describe("PlaylistCard", () => {
 		expect(wrapper.text()).toContain("Test Playlist");
 	});
 
-	it("displays playlist description", () => {
+	it("displays playlist description", async () => {
+		const { useMediaQuery } = await import("@vueuse/core");
+		vi.mocked(useMediaQuery).mockReturnValueOnce(computed(() => true)); // medium screen
+
 		const wrapper = mount(PlaylistCard, {
 			props: {
 				playlist: mockPlaylist,
@@ -84,7 +79,10 @@ describe("PlaylistCard", () => {
 		expect(wrapper.text()).toContain("A test playlist description");
 	});
 
-	it("truncates long descriptions to 60 characters with ellipsis", () => {
+	it("truncates long descriptions to 60 characters on medium screens", async () => {
+		const { useMediaQuery } = await import("@vueuse/core");
+		vi.mocked(useMediaQuery).mockReturnValueOnce(computed(() => true)); // medium screen
+
 		const longDescription =
 			"This is a very long playlist description that definitely exceeds the sixty character limit";
 		const playlistWithLongDesc: PlaylistWithId = {
@@ -106,10 +104,37 @@ describe("PlaylistCard", () => {
 		});
 
 		const text = wrapper.text();
-		expect(text).toContain(
-			"This is a very long playlist description that definitely exc...",
-		);
+		expect(text).toContain(`${longDescription.substring(0, 60)}...`);
 		expect(text).not.toContain("limit");
+	});
+
+	it("truncates long descriptions to 15 characters on small screens", async () => {
+		const { useMediaQuery } = await import("@vueuse/core");
+		vi.mocked(useMediaQuery); // small screen
+
+		const longDescription =
+			"This is a very long playlist description that definitely exceeds the limit";
+		const playlistWithLongDesc: PlaylistWithId = {
+			...mockPlaylist,
+			description: longDescription,
+		};
+
+		const wrapper = mount(PlaylistCard, {
+			props: {
+				playlist: playlistWithLongDesc,
+				isLoading: false,
+			},
+			global: {
+				stubs: {
+					UAvatar: true,
+					UButton: true,
+				},
+			},
+		});
+
+		const text = wrapper.text();
+		expect(text).toContain(`${longDescription.substring(0, 15)}...`);
+		expect(text).not.toContain("long");
 	});
 
 	it("does not add ellipsis to short descriptions", () => {
