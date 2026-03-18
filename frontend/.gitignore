@@ -1,6 +1,7 @@
 # Env
 .env*
 !.env.example
+!.env.production
 
 # Logs
 logs
@@ -44,3 +45,7 @@ __screenshots__/
 
 test-results/
 playwright-report/
+
+# Auto-generated type declarations
+auto-imports.d.ts
+components.d.ts

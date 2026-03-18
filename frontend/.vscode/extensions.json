@@ -3,6 +3,7 @@
 		"Vue.volar",
 		"vitest.explorer",
 		"ms-playwright.playwright",
-		"biomejs.biome"
+		"biomejs.biome",
+		"bradlc.vscode-tailwindcss"
 	]
 }
