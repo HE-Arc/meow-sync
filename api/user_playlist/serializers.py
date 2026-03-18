@@ -3,6 +3,6 @@ from .models import UserPlaylist
 
 
 class UserPlaylistSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserPlaylist
-        fields = '__all__'
+	class Meta:
+		model = UserPlaylist
+		fields = '__all__'

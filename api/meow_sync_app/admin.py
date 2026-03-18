@@ -1,5 +1,10 @@
 from django.contrib import admin  # noqa: F401
-from .models import OAuthConnection, OAuthState, PlaylistSynchronization, SongIdTranslation
+from .models import (
+	OAuthConnection,
+	OAuthState,
+	PlaylistSynchronization,
+	SongIdTranslation,
+)
 
 admin.site.register(OAuthConnection)
 admin.site.register(OAuthState)

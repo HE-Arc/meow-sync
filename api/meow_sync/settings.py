@@ -19,40 +19,46 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 def env_to_list(env_name: str, default_values: list[str]) -> list[str]:
-    raw_value = os.getenv(env_name, None)
-    if raw_value is None:
-        return default_values
-    
-    return [s.strip() for s in raw_value.split(',')]
+	raw_value = os.getenv(env_name, None)
+	if raw_value is None:
+		return default_values
+
+	return [s.strip() for s in raw_value.split(',')]
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-6i6x@*#$nxy7f_k(vwo3t28php6@p(o&7ou95))rjpuz)ukm2_')
+SECRET_KEY = os.getenv(
+	'SECRET_KEY', 'django-insecure-6i6x@*#$nxy7f_k(vwo3t28php6@p(o&7ou95))rjpuz)ukm2_'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True if os.getenv('DEBUG', 'True').lower() == 'true' else False
 
-ALLOWED_HOSTS = env_to_list('ALLOWED_HOSTS', ["localhost", "127.0.0.1"])
+ALLOWED_HOSTS = env_to_list('ALLOWED_HOSTS', ['localhost', '127.0.0.1'])
 
-CORS_ALLOWED_ORIGINS = env_to_list('CORS_ALLOWED_ORIGINS', ["http://localhost:5173", "http://127.0.0.1:5173"])
+CORS_ALLOWED_ORIGINS = env_to_list(
+	'CORS_ALLOWED_ORIGINS', ['http://localhost:5173', 'http://127.0.0.1:5173']
+)
 
-CSRF_TRUSTED_ORIGINS = env_to_list('CSRF_TRUSTED_ORIGINS', ["http://localhost:5173/", "http://127.0.0.1:5173/"])
-
+CSRF_TRUSTED_ORIGINS = env_to_list(
+	'CSRF_TRUSTED_ORIGINS', ['http://localhost:5173/', 'http://127.0.0.1:5173/']
+)
 
 
 # Application definition
 
 INSTALLED_APPS = [
 	'rest_framework',
-	'rest_framework.authtoken', # for JWT auth
+	'rest_framework.authtoken',  # for JWT auth
 	'drf_spectacular',
 	'meow_sync_app',
 	'user_playlist',
-    'corsheaders',
+	'corsheaders',
 	'django.contrib.admin',
 	'django.contrib.auth',
 	'django.contrib.contenttypes',
@@ -62,7 +68,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+	'corsheaders.middleware.CorsMiddleware',
 	'django.middleware.security.SecurityMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
 	'django.middleware.common.CommonMiddleware',
@@ -99,10 +105,10 @@ DATABASES = {
 	'default': {
 		'ENGINE': os.getenv('DATABASE_ENGINE', 'django.db.backends.sqlite3'),
 		'NAME': os.getenv('DATABASE_NAME', BASE_DIR / 'db.sqlite3'),
-        'USER': os.getenv('DATABASE_USER', None),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD', None),
-        'HOST': os.getenv('DATABASE_HOST', None),
-        'PORT': os.getenv('DATABASE_PORT', None)
+		'USER': os.getenv('DATABASE_USER', None),
+		'PASSWORD': os.getenv('DATABASE_PASSWORD', None),
+		'HOST': os.getenv('DATABASE_HOST', None),
+		'PORT': os.getenv('DATABASE_PORT', None),
 	}
 }
 

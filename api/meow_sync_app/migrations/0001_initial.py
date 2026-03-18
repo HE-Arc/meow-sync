@@ -6,73 +6,125 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+	initial = True
 
-    initial = True
+	dependencies = [
+		migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+	]
 
-    dependencies = [
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-    ]
-
-    operations = [
-        migrations.CreateModel(
-            name='OAuthConnection',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('provider', models.CharField(choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')], max_length=255)),
-                ('access_token', models.CharField(max_length=255)),
-                ('refresh_token', models.CharField(blank=True, max_length=255, null=True)),
-                ('token_expires_at', models.DateTimeField(blank=True, null=True)),
-                ('extra_data', models.JSONField()),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'abstract': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='OAuthState',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('state', models.CharField(max_length=255, unique=True)),
-                ('provider', models.CharField(choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')], max_length=255)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'abstract': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='PlaylistSynchronization',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('first_playlist_id', models.CharField(max_length=255)),
-                ('first_provider', models.CharField(choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')], max_length=255)),
-                ('second_playlist_id', models.CharField(max_length=255)),
-                ('second_provider', models.CharField(choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')], max_length=255)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'abstract': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='SongIdTranslation',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('spotify_id', models.CharField(blank=True, max_length=255, null=True)),
-                ('youtube_id', models.CharField(blank=True, max_length=255, null=True)),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'unique_together': {('user', 'spotify_id'), ('user', 'youtube_id')},
-            },
-        ),
-    ]
+	operations = [
+		migrations.CreateModel(
+			name='OAuthConnection',
+			fields=[
+				('id', models.BigAutoField(primary_key=True, serialize=False)),
+				('created_at', models.DateTimeField(auto_now_add=True)),
+				('updated_at', models.DateTimeField(auto_now=True)),
+				(
+					'provider',
+					models.CharField(
+						choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')],
+						max_length=255,
+					),
+				),
+				('access_token', models.CharField(max_length=255)),
+				(
+					'refresh_token',
+					models.CharField(blank=True, max_length=255, null=True),
+				),
+				('token_expires_at', models.DateTimeField(blank=True, null=True)),
+				('extra_data', models.JSONField()),
+				(
+					'user',
+					models.ForeignKey(
+						on_delete=django.db.models.deletion.CASCADE,
+						to=settings.AUTH_USER_MODEL,
+					),
+				),
+			],
+			options={
+				'abstract': False,
+			},
+		),
+		migrations.CreateModel(
+			name='OAuthState',
+			fields=[
+				('id', models.BigAutoField(primary_key=True, serialize=False)),
+				('created_at', models.DateTimeField(auto_now_add=True)),
+				('updated_at', models.DateTimeField(auto_now=True)),
+				('state', models.CharField(max_length=255, unique=True)),
+				(
+					'provider',
+					models.CharField(
+						choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')],
+						max_length=255,
+					),
+				),
+				(
+					'user',
+					models.ForeignKey(
+						on_delete=django.db.models.deletion.CASCADE,
+						to=settings.AUTH_USER_MODEL,
+					),
+				),
+			],
+			options={
+				'abstract': False,
+			},
+		),
+		migrations.CreateModel(
+			name='PlaylistSynchronization',
+			fields=[
+				('id', models.BigAutoField(primary_key=True, serialize=False)),
+				('created_at', models.DateTimeField(auto_now_add=True)),
+				('updated_at', models.DateTimeField(auto_now=True)),
+				('first_playlist_id', models.CharField(max_length=255)),
+				(
+					'first_provider',
+					models.CharField(
+						choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')],
+						max_length=255,
+					),
+				),
+				('second_playlist_id', models.CharField(max_length=255)),
+				(
+					'second_provider',
+					models.CharField(
+						choices=[('spotify', 'Spotify'), ('youtube', 'Youtube')],
+						max_length=255,
+					),
+				),
+				(
+					'user',
+					models.ForeignKey(
+						on_delete=django.db.models.deletion.CASCADE,
+						to=settings.AUTH_USER_MODEL,
+					),
+				),
+			],
+			options={
+				'abstract': False,
+			},
+		),
+		migrations.CreateModel(
+			name='SongIdTranslation',
+			fields=[
+				('id', models.BigAutoField(primary_key=True, serialize=False)),
+				('created_at', models.DateTimeField(auto_now_add=True)),
+				('updated_at', models.DateTimeField(auto_now=True)),
+				('spotify_id', models.CharField(blank=True, max_length=255, null=True)),
+				('youtube_id', models.CharField(blank=True, max_length=255, null=True)),
+				(
+					'user',
+					models.ForeignKey(
+						blank=True,
+						null=True,
+						on_delete=django.db.models.deletion.CASCADE,
+						to=settings.AUTH_USER_MODEL,
+					),
+				),
+			],
+			options={
+				'unique_together': {('user', 'spotify_id'), ('user', 'youtube_id')},
+			},
+		),
+	]
