@@ -10,7 +10,7 @@ function redirectTo(syncProvider: SyncProviderInformation) {
 </script>
 
 <template>
-  <main class="flex flex-col items-center justify-center h-screen">
+  <div class="flex flex-col items-center justify-center text-center">
     <h1 class="text-4xl font-bold mb-4">Welcome to Meow Sync!</h1>
     <p class="text-lg text-gray-600 mb-8">
       Your ultimate playlist synchronization tool.
@@ -27,5 +27,5 @@ function redirectTo(syncProvider: SyncProviderInformation) {
         Login with {{ syncProvider.name }}
       </UButton>
     </div>
-  </main>
+  </div>
 </template>

@@ -59,15 +59,23 @@ defineShortcuts({
             />
           </UTooltip>
         </template>
+        <template #body>
+          <UNavigationMenu
+            :items="items"
+            orientation="vertical"
+            class="-mx-2.5"
+          />
+        </template>
       </UHeader>
 
-      <UMain>
-        <RouterView />
+      <UMain class="flex w-screen">
+        <RouterView class="w-full" />
       </UMain>
 
       <UFooter>
         <p class="text-center text-sm text-gray-500">
-          &copy; {{ new Date().getFullYear() }} Meow Sync. All rights reserved.
+          &copy; {{ new Date().getFullYear() }} Haute-Ecole Arc. All rights
+          reserved.
         </p>
       </UFooter>
     </UApp>
