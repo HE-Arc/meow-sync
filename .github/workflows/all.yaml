@@ -11,7 +11,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   django-ci:
@@ -22,6 +22,8 @@ jobs:
 
   deployment:
     uses: ./.github/workflows/reusable-cd.yaml
+    environment: Production
+    concurrency: production
     needs: [django-ci, vue-ci]
     if: always() && github.ref == 'refs/heads/main'
     secrets:
