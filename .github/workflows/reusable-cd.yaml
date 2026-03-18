@@ -16,7 +16,7 @@ jobs:
   deploy_backend:
     name: Deploy backend
     runs-on: ubuntu-latest
-    environment: Production
+    environment: production
     steps:
       - uses: actions/checkout@v6
         with:
@@ -70,6 +70,7 @@ jobs:
 
   deploy_frontend:
     name: Deploy frontend
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
