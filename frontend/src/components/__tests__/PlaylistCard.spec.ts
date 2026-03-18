@@ -21,9 +21,14 @@ describe("PlaylistCard", () => {
 			props: {
 				isLoading: true,
 			},
+			global: {
+				stubs: {
+					USkeleton: true,
+				},
+			},
 		});
 
-		expect(wrapper.findComponent({ name: "USkeleton" }).exists()).toBe(true);
+		expect(wrapper.find("div .animate-pulse").exists()).toBe(true);
 	});
 
 	it("renders playlist content when isLoading is false", () => {

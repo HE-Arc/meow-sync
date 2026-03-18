@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { FormSubmitEvent } from "@nuxt/ui";
+import { useToast } from "@nuxt/ui/runtime/composables/useToast.js";
 import { type Ref, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";

@@ -67,9 +67,9 @@ loadPlaylists();
         :key="playlist.playlist_id"
         :playlist="playlist"
         :isLoading="false"
-        @click="(id) => router.push(`/playlists/${id}`)"
-        @edit="(id) => router.push(`/playlists/${id}/edit`)"
-        @delete="(id) => handleDelete(id)"
+        @click="(id: number) => router.push(`/playlists/${id}`)"
+        @edit="(id: number) => router.push(`/playlists/${id}/edit`)"
+        @delete="(id: number) => handleDelete(id)"
       />
     </div>
 
