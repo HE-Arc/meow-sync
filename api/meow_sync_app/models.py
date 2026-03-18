@@ -20,10 +20,11 @@ class AbstractBaseModel(models.Model):
 class OAuthConnection(AbstractBaseModel):
 	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
+	provider_user_id = models.CharField(max_length=255)
 	provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
 	access_token = models.CharField(max_length=255)
-	refresh_token = models.CharField(max_length=255, blank=True, null=True)
-	token_expires_at = models.DateTimeField(blank=True, null=True)
+	refresh_token = models.CharField(max_length=255)
+	token_expires_at = models.DateTimeField()
 	extra_data = models.JSONField()
 
 

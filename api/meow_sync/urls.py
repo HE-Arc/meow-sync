@@ -18,8 +18,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-
-from meow_sync_app.views import CommentViewSet
+from meow_sync_app.views import (
+	OAuthCallbackView,
+	OAuthDisconnectView,
+	OAuthLoginView,
+	CommentViewSet,
+)
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 router = DefaultRouter()
@@ -32,6 +36,14 @@ urlpatterns = [
 		'api/swagger/',
 		SpectacularSwaggerView.as_view(url_name='schema'),
 		name='swagger-ui',
+	),
+	# TODO: move to main app
+	path('api/oauth/<str:provider>/login/', OAuthLoginView.as_view(), name='oauth-login'),
+	path('api/oauth/<str:provider>/callback/', OAuthCallbackView.as_view(), name='oauth-callback'),
+	path(
+		'api/oauth/<str:provider>/disconnect/',
+		OAuthDisconnectView.as_view(),
+		name='oauth-disconnect',
 	),
 	path('api/', include(router.urls)),
 ]
