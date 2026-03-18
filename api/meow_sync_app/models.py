@@ -71,7 +71,7 @@ class Comment(AbstractBaseModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='playlist_sync_comments',
+        related_name='playlist_sync_comment',
     )
     playlist_sync = models.ForeignKey(
         PlaylistSynchronization,
