@@ -13,15 +13,54 @@ env:
   NODE_VERSION: '24'
 
 jobs:
-  deploy_backend:
-    name: Deploy backend
+  build_frontend:
+    name: Build frontend
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore node_modules from cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: npm CI
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+  deploy:
+    name: Deploy to production
+    needs: build_frontend
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
 
       - name: Kill backend process
         uses: appleboy/ssh-action@v1
@@ -40,7 +79,18 @@ jobs:
                 kill $PID
               fi
 
-      - name: Copy new files
+      - name: Copy frontend files
+        uses: appleboy/scp-action@v1
+        with:
+          username: ${{ env.SSH_USERNAME }}
+          host: ${{ env.SSH_HOST }}
+          port: ${{ env.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: frontend/dist/*
+          target: /home/django/project/frontend
+          strip_components: 2
+
+      - name: Copy backend files
         uses: appleboy/scp-action@v1
         with:
           username: ${{ env.SSH_USERNAME }}
@@ -67,43 +117,4 @@ jobs:
               /home/django/.local/bin/uv run manage.py collectstatic --noinput
               /home/django/.local/bin/uv run manage.py migrate
               sudo systemctl restart hypercorn
-
-  deploy_frontend:
-    name: Deploy frontend
-    environment: production
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Restore node_modules from cache
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
-
-      - name: npm CI
-        working-directory: frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
-
-      - name: Copy new files
-        uses: appleboy/scp-action@v1
-        with:
-          user: ${{ env.SSH_USERNAME }}
-          host: ${{ env.SSH_HOST }}
-          port: ${{ env.SSH_PORT }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: frontend/dist/*
-          target: /home/django/project/frontend
-          strip_components: 2
 
