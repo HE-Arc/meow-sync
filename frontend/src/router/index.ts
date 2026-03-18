@@ -17,6 +17,9 @@ const router = createRouter({
 			path: "/",
 			name: "home",
 			component: HomeView,
+			beforeEnter: (_to, _from, next) => {
+				next({ name: "playlists_view" }); // Temporarily redirect to playlists view
+			},
 		},
 		{
 			path: "/login_callback",
