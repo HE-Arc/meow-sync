@@ -22,7 +22,6 @@ jobs:
 
   deployment:
     uses: ./.github/workflows/reusable-cd.yaml
-    environment: Production
     concurrency: production
     needs: [django-ci, vue-ci]
     if: always() && github.ref == 'refs/heads/main'
