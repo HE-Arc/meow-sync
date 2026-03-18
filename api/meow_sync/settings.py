@@ -38,9 +38,10 @@ DEBUG = True if os.getenv('DEBUG', 'True').lower() == 'true' else False
 
 ALLOWED_HOSTS = env_to_list('ALLOWED_HOSTS', ["localhost", "127.0.0.1"])
 
-CORS_ALLOWED_ORIGINS = env_to_list('CORS_ALLOWED_ORIGINS', ["http://localhost:5173/", "http://127.0.0.1:5173/"])
+CORS_ALLOWED_ORIGINS = env_to_list('CORS_ALLOWED_ORIGINS', ["http://localhost:5173", "http://127.0.0.1:5173"])
 
 CSRF_TRUSTED_ORIGINS = env_to_list('CSRF_TRUSTED_ORIGINS', ["http://localhost:5173/", "http://127.0.0.1:5173/"])
+
 
 
 # Application definition
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
 	'drf_spectacular',
 	'meow_sync_app',
 	'user_playlist',
+    'corsheaders',
 	'django.contrib.admin',
 	'django.contrib.auth',
 	'django.contrib.contenttypes',
@@ -60,6 +62,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
 	'django.middleware.security.SecurityMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
 	'django.middleware.common.CommonMiddleware',
