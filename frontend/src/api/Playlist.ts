@@ -25,10 +25,10 @@ export type PlaylistWithId = z.infer<typeof PlaylistSchema>;
 const PLAYLIST_BASE_URL = `${import.meta.env.VITE_API_URL}/api/playlists`;
 
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
-	const token = localStorage.getItem("token");
+	/*const token = localStorage.getItem("token");
 	if (!token) {
 		throw new Error("No access token found");
-	}
+	}*/ //TODO: Re-enable this when the backend is ready to accept the token
 
 	const headers = {
 		...options.headers,
