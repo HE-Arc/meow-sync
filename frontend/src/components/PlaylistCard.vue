@@ -1,5 +1,7 @@
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
 import { computed } from "vue";
+import { is } from "zod/locales";
 import type { PlaylistWithId } from "@/api/Playlist";
 
 defineEmits<{
@@ -12,6 +14,8 @@ const props = defineProps<{
   isLoading: boolean;
 }>();
 
+const isMediumScreen = useMediaQuery("(min-width: 768px)");
+
 const playlistImage = computed(() => {
   return props.playlist?.img_url || "/default_playlist_image.png";
 });
@@ -19,7 +23,7 @@ const playlistImage = computed(() => {
 const truncatedDescription = computed(() => {
   const description = props.playlist?.description;
   if (!description) return "";
-  const maxLength = 60;
+  const maxLength = isMediumScreen.value ? 60 : 15;
   return description.length > maxLength
     ? `${description.substring(0, maxLength)}...`
     : description;

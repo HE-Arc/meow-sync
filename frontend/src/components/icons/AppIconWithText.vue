@@ -4,7 +4,7 @@ import logo from "@/assets/logo.svg";
 
 <template>
   <div class="flex items-center">
-    <img :src="logo" alt="App logo" class="h-20 w-20 p-2" />
+    <img :src="logo" alt="App logo" class="h-15 w-15 p-2" />
     <h1 class="text-2xl m-1"><span class="text-primary">Meow</span> // Sync</h1>
   </div>
 </template>
