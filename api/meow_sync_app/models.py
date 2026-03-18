@@ -36,13 +36,18 @@ class OAuthState(AbstractBaseModel):
 
 
 class PlaylistSynchronization(AbstractBaseModel):
-	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
-	first_playlist_id = models.CharField(max_length=255)
-	first_provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
-	second_playlist_id = models.CharField(max_length=255)
-	second_provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
+    first_playlist_id = models.CharField(max_length=255)
+    first_provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
+    second_playlist_id = models.CharField(max_length=255)
+    second_provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
 
+    commenters = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Comment',
+        related_name='commented_playlist_syncs',
+    )
 
 class SongIdTranslation(AbstractBaseModel):
 	# optional, for user specific overrides
@@ -61,3 +66,19 @@ class SongIdTranslation(AbstractBaseModel):
 			('user', 'youtube_id'),
 			('user', 'spotify_id'),
 		]
+
+class Comment(AbstractBaseModel):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='playlist_sync_comments',
+    )
+    playlist_sync = models.ForeignKey(
+        PlaylistSynchronization,
+        on_delete=models.CASCADE,
+        related_name='comment',
+    )
+    comment = models.TextField()
+
+    class Meta:
+        ordering = ['-created_at']

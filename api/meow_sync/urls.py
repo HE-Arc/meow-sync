@@ -19,11 +19,9 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from user_playlist.views import UserPlaylistViewSet
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 router = DefaultRouter()
-router.register(r'playlists', UserPlaylistViewSet, basename='playlist')
 
 urlpatterns = [
 	path('admin/', admin.site.urls),

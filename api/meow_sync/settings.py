@@ -57,7 +57,6 @@ INSTALLED_APPS = [
 	'rest_framework.authtoken',  # for JWT auth
 	'drf_spectacular',
 	'meow_sync_app',
-	'user_playlist',
 	'corsheaders',
 	'django.contrib.admin',
 	'django.contrib.auth',
