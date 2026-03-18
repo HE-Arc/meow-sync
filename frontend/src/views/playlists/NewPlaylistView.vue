@@ -17,16 +17,16 @@ const props = defineProps<{
 }>();
 
 const isLoading = ref(true);
-const toast = useToast();
+const toast = useToast?.();
 
 const state: Ref<Playlist> = ref({
   playlist_id: "",
   provider: "spotify",
   title: "",
-  description: "",
+  description: null,
   author: "",
-  img_url: "",
-});
+  img_url: null,
+} as Playlist);
 
 const providers = ref(
   SyncProviders.map((provider) => ({
@@ -36,7 +36,7 @@ const providers = ref(
 );
 
 async function loadPlaylist() {
-  if (props.isEditMode) {
+  if (props.isEditMode && props.id) {
     try {
       const data = await getPlaylistById(props.id);
       state.value = data;
@@ -47,12 +47,27 @@ async function loadPlaylist() {
   isLoading.value = false;
 }
 
-async function submit(event: FormSubmitEvent<Playlist>) {
-  toast.add({
-    title: props.isEditMode
-      ? "Playlist updated successfully"
-      : "Playlist created successfully",
-  });
+async function submit(_event: FormSubmitEvent<Playlist>) {
+  try {
+    if (props.isEditMode && props.id) {
+      await updatePlaylist(props.id, state.value);
+    } else {
+      await createPlaylist(state.value);
+    }
+    toast?.add({
+      title: props.isEditMode
+        ? "Playlist updated successfully"
+        : "Playlist created successfully",
+      color: "green",
+    });
+  } catch (error) {
+    console.error("Failed to submit playlist:", error);
+    toast?.add({
+      title: "Error",
+      description: "Failed to save playlist",
+      color: "red",
+    });
+  }
 }
 
 loadPlaylist();
@@ -60,53 +75,107 @@ loadPlaylist();
 
 <template>
   <template v-if="isLoading">
-    <p>Loading...</p>
+    <div
+      class="flex items-center justify-center min-h-screen bg-white dark:bg-slate-950"
+    >
+      <p class="text-lg text-gray-500 dark:text-gray-400">Loading...</p>
+    </div>
   </template>
-  <div v-else class="flex items-center justify-center flex-col">
-    <h1 class="text-2xl font-bold m-4">
-      {{ props.isEditMode ? "Edit Playlist" : "Create New Playlist" }}
-    </h1>
-    <UForm :schema="PlaylistSchema" :state="state" @submit="submit">
-      <UFormField label="Playlist ID" name="playlist_id">
-        <UInput
-          v-model="state.playlist_id"
-          :disabled="props.isEditMode"
-          placeholder="Enter playlist ID"
-        />
-      </UFormField>
-      <UFormField label="Title" name="title">
-        <UInput v-model="state.title" placeholder="Enter playlist title" />
-      </UFormField>
+  <div
+    v-else
+    class="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-12 px-4"
+  >
+    <div class="max-w-md mx-auto">
+      <div
+        class="bg-white dark:bg-slate-900 rounded-lg shadow-lg dark:shadow-xl p-8"
+      >
+        <h1 class="text-3xl font-bold mb-2 text-slate-900 dark:text-slate-50">
+          {{ props.isEditMode ? "Edit Playlist" : "Create New Playlist" }}
+        </h1>
+        <p class="text-slate-500 dark:text-slate-400 mb-8">
+          {{
+            props.isEditMode
+              ? "Update your playlist details"
+              : "Add a new playlist to your collection"
+          }}
+        </p>
 
-      <UFormField label="Author" name="author">
-        <UInput v-model="state.author" placeholder="Enter author name" />
-      </UFormField>
+        <UForm
+          :schema="PlaylistSchema"
+          :state="state"
+          @submit="submit"
+          class="space-y-6"
+        >
+          <UFormField label="Playlist ID" name="playlist_id" class="space-y-2">
+            <UInput
+              v-model="state.playlist_id"
+              :disabled="props.isEditMode"
+              placeholder="Enter playlist ID"
+              size="lg"
+              class="w-full"
+            />
+          </UFormField>
 
-      <UFormField label="Description" name="description">
-        <UTextarea
-          v-model="state.description"
-          placeholder="Enter playlist description"
-        />
-      </UFormField>
+          <UFormField label="Title" name="title" class="space-y-2">
+            <UInput
+              v-model="state.title"
+              placeholder="Enter playlist title"
+              size="lg"
+              class="w-full"
+            />
+          </UFormField>
 
-      <UFormField label="Provider" name="provider">
-        <USelect
-          v-model="state.provider"
-          :items="providers"
-          placeholder="Select a provider"
-        />
-      </UFormField>
+          <UFormField label="Author" name="author" class="space-y-2">
+            <UInput
+              v-model="state.author"
+              placeholder="Enter author name"
+              size="lg"
+              class="w-full"
+            />
+          </UFormField>
 
-      <UFormField label="Image URL" name="img_url" class="mt-2">
-        <UInput
-          v-model="state.img_url"
-          placeholder="https://example.com/image.jpg"
-        />
-      </UFormField>
+          <UFormField label="Description" name="description" class="space-y-2">
+            <UTextarea
+              :model-value="state.description ?? ''"
+              @update:model-value="state.description = $event || null"
+              placeholder="Enter playlist description"
+              class="w-full"
+              :rows="4"
+            />
+          </UFormField>
 
-      <UButton type="submit" color="primary" class="mt-4">
-        {{ props.isEditMode ? "Update Playlist" : "Create Playlist" }}
-      </UButton>
-    </UForm>
+          <UFormField label="Provider" name="provider" class="space-y-2">
+            <USelect
+              v-model="state.provider"
+              :items="providers"
+              placeholder="Select a provider"
+              size="lg"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField label="Image URL" name="img_url" class="space-y-2">
+            <UInput
+              :model-value="state.img_url ?? ''"
+              @update:model-value="state.img_url = $event || null"
+              placeholder="https://example.com/image.jpg"
+              size="lg"
+              class="w-full"
+            />
+          </UFormField>
+
+          <div class="flex gap-3 pt-2">
+            <UButton
+              type="submit"
+              color="primary"
+              size="lg"
+              class="flex-1 justify-center"
+            >
+              {{ props.isEditMode ? "Update Playlist" : "Create Playlist" }}
+            </UButton>
+          </div>
+        </UForm>
+      </div>
+    </div>
   </div>
 </template>
