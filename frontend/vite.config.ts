@@ -3,10 +3,11 @@ import ui from "@nuxt/ui/vite";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 import vueDevTools from "vite-plugin-vue-devtools";
+import djangoBackendSync from "./vite-plugin-django-backend-sync";
 
 // https://vite.dev/config/
 export default defineConfig({
-	plugins: [vue(), ui(), vueDevTools()],
+	plugins: [djangoBackendSync(), vue(), ui(), vueDevTools()],
 	resolve: {
 		alias: {
 			"@": fileURLToPath(new URL("./src", import.meta.url)),

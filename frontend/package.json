@@ -13,11 +13,13 @@
 		"type-check": "vue-tsc --build",
 		"format:write": "biome format --write",
 		"lint:fix": "biome check --write",
-		"lint": "biome check"
+		"lint": "biome check",
+		"generate:client": "openapi-typescript openapi.yml --output src/api/schema.d.ts"
 	},
 	"dependencies": {
 		"@nuxt/ui": "^4.5.1",
 		"@vueuse/core": "^14.2.1",
+		"openapi-fetch": "^0.17.0",
 		"tailwindcss": "^4.2.1",
 		"vue": "^3.5.29",
 		"vue-router": "^4.5.0",
@@ -34,6 +36,7 @@
 		"@vue/tsconfig": "^0.8.1",
 		"jsdom": "^28.1.0",
 		"npm-run-all2": "^8.0.4",
+		"openapi-typescript": "^7.13.0",
 		"typescript": "~5.9.3",
 		"vite": "^7.3.1",
 		"vite-plugin-vue-devtools": "^8.0.6",
