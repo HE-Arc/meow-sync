@@ -50,4 +50,3 @@ playwright-report/
 auto-imports.d.ts
 components.d.ts
 src/api/schema.d.ts
-openapi.yml
