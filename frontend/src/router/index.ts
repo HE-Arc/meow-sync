@@ -5,11 +5,6 @@ import PlaylistDetailsView from "@/views/playlists/PlaylistDetailsView.vue";
 import PlaylistsView from "@/views/playlists/PlaylistsView.vue";
 import HomeView from "../views/HomeView.vue";
 
-function _isAuthenticated(): boolean {
-	const token = localStorage.getItem("token");
-	return !!token;
-}
-
 const router = createRouter({
 	history: createWebHistory(import.meta.env.BASE_URL),
 	routes: [
@@ -26,14 +21,8 @@ const router = createRouter({
 		{
 			path: "/playlists",
 			name: "playlists",
-			/*beforeEnter: (_to, _from, next) => {
-				if (!isAuthenticated()) {
-					next({ name: "home" });
-				} else {
-					next();
-				}
-			},*/ // TODO: Re-enable this when the backend is ready to accept the token
 			props: true,
+			//meta: { requiresAuth: true }, //TODO: Uncomment when authentication is implemented
 			children: [
 				{
 					path: "view",
@@ -68,7 +57,34 @@ const router = createRouter({
 			// which is lazy-loaded when the route is visited.
 			component: () => import("../views/AboutView.vue"),
 		},
+		{
+			path: "/403",
+			name: "forbidden",
+			component: () => import("../views/ErrorView.vue"),
+			props: { errorCode: 403, errorMessage: "Forbidden" },
+		},
+		{
+			path: "/404",
+			name: "not_found",
+			component: () => import("../views/ErrorView.vue"),
+			props: { errorCode: 404, errorMessage: "Page Not Found" },
+		},
+		{
+			path: "/:catchAll(.*)",
+			redirect: "/404",
+		},
 	],
+});
+
+router.beforeEach((to, _from, next) => {
+	const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+	const isAuthenticated = !!localStorage.getItem("access_token");
+
+	if (requiresAuth && !isAuthenticated) {
+		next("/403");
+	} else {
+		next();
+	}
 });
 
 export default router;
