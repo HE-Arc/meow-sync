@@ -97,11 +97,15 @@ class OAuthLoginView(APIView):
 		)
 		oauth_state.save()
 
+        provider_api_class = get_api_interface_class_for_provider(
+            oauth_state.provider
+        )
+
 		return Response(
 			{
 				'provider': provider,
 				'state': oauth_state.state,
-				'login_url': SpotifyApi.login_url(oauth_state.state),
+				'login_url': provider_api_class.login_url(oauth_state.state),
 			},
 			status=status.HTTP_200_OK,
 		)
