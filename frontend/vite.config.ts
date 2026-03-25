@@ -19,7 +19,13 @@ export default defineConfig({
 			typeOutputPath: "src/api/schema.d.ts",
 		}),
 		vue(),
-		ui(),
+		ui({
+			ui: {
+				main: {
+					base: "min-h-[calc(100vh-var(--ui-header-height)-var(--ui-footer-height))]",
+				},
+			},
+		}),
 		vueDevTools(),
 	],
 	resolve: {
