@@ -8,6 +8,7 @@ const props = defineProps<{
 </script>
 <template>
   <div class="flex flex-col items-center justify-center">
+    <!-- biome-ignore lint/a11y/useAltText: We have an alt that is binded to the error code -->
     <img
       :src="`https://http.cat/${props.errorCode}.jpg`"
       :alt="`Error ${props.errorCode} cat`"
