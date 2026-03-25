@@ -158,12 +158,17 @@ class OAuthCallbackView(APIView):
 					status=provider_user_response.status_code,
 				)
 			try:
-				# existing user
+				# existing connection
 				oauth_connection = OAuthConnection.objects.get(
 					provider=provider,
 					provider_user_id=provider_user_response.data.id
 				)
 
+				current_user = request.user if request.user.is_authenticated else None
+				# sync users when connecting with a second social provider
+				if current_user and current_user.username != oauth_connection.user.username:
+					oauth_connection.user = current_user
+				
 				oauth_connection.access_token = provider_tokens.access_token
 				oauth_connection.refresh_token = provider_tokens.refresh_token
 				oauth_connection.token_expires_at = datetime.now() + timedelta(seconds=(provider_tokens.expires_in - 5))
