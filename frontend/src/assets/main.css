@@ -3,6 +3,7 @@
 
 :root {
 	--ui-primary: #15d1df;
+	--ui-footer-height: 4rem;
 }
 
 .dark {
