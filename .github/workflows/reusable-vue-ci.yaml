@@ -5,6 +5,9 @@ on:
 
 env:
   NODE_VERSION: '24'
+  PYTHON_VERSION: '3.14.3'
+  UV_VERSION: '0.10.4'
+
 
 jobs:
   # The following code was first generated using github copilot then refactored manually to fit better
@@ -52,6 +55,16 @@ jobs:
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
 
       - name: Run unit tests
         working-directory: frontend
@@ -104,6 +117,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+
       - name: Restore node_modules from cache
         uses: actions/cache@v4
         with:
@@ -125,6 +148,16 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
 
       - name: Restore node_modules from cache
         uses: actions/cache@v4
