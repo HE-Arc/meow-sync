@@ -157,50 +157,73 @@ class OAuthCallbackView(APIView):
 					},
 					status=provider_user_response.status_code,
 				)
-
-			if not oauth_state.user:
-				username = f'user_{random_str_alphanum(12)}'
-				# set username from name on provider platform if available
-				if provider_user_response.data.name:
-					username = (
-						provider_user_response.data.name[:240]
-						.lower()
-						.replace('  ', ' ')  # replace double spaces
-						.replace(' ', '_')[
-							  # replace spaces with '_'
-							:245
-						]  # truncate string
-						+ '_' + random_str_alphanum(4)
-					)  # some randomness for users with same name
-
-				user = User.objects.create(
-					username=username, password=random_str_alphanum(255)
+			try:
+				# existing user
+				oauth_connection = OAuthConnection.objects.get(
+					provider=provider,
+					provider_user_id=provider_user_response.data.id
 				)
-				user.save()
-				oauth_state.user = user
-				oauth_state.save()
 
-			user = oauth_state.user
-			oauth_connection = OAuthConnection(
-				user=user,
-				provider=oauth_state.provider,
-				provider_user_id=provider_user_response.data.id,
-				access_token=provider_tokens.access_token,
-				refresh_token=provider_tokens.refresh_token,
-				token_expires_at=datetime.now()
-				+ timedelta(seconds=(provider_tokens.expires_in - 5)),
-			)
-			oauth_connection.save()
+				oauth_connection.access_token = provider_tokens.access_token
+				oauth_connection.refresh_token = provider_tokens.refresh_token
+				oauth_connection.token_expires_at = datetime.now() + timedelta(seconds=(provider_tokens.expires_in - 5))
+				oauth_connection.save()
 
-			auth_token, created = Token.objects.get_or_create(user=user)
+				user = oauth_connection.user
+				auth_token, created = Token.objects.get_or_create(user=user)
 
-			return Response(
-				{
-					'message': f'Successfully connected with {MUSIC_PROVIDERS[provider]}.',
-					'auth_token': auth_token.key,
-				},
-				status=status.HTTP_201_CREATED,
-			)
+				return Response(
+					{
+						'message': f'Successfully connected with {MUSIC_PROVIDERS[provider]}. (existing user)',
+						'auth_token': auth_token.key,
+					},
+					status=status.HTTP_201_CREATED,
+				)
+
+			except OAuthConnection.DoesNotExist:
+				# new user
+				if not oauth_state.user:
+					username = f'user_{random_str_alphanum(12)}'
+					# set username from name on provider platform if available
+					if provider_user_response.data.name:
+						username = (
+							provider_user_response.data.name[:240]
+							.lower()
+							.replace('  ', ' ')  # replace double spaces
+							.replace(' ', '_')[
+								# replace spaces with '_'
+								:245
+							]  # truncate string
+							+ '_' + random_str_alphanum(4)
+						)  # some randomness for users with same name
+
+					user = User.objects.create(
+						username=username, password=random_str_alphanum(255)
+					)
+					user.save()
+					oauth_state.user = user
+					oauth_state.save()
+
+				user = oauth_state.user
+				oauth_connection = OAuthConnection(
+					user=user,
+					provider=oauth_state.provider,
+					provider_user_id=provider_user_response.data.id,
+					access_token=provider_tokens.access_token,
+					refresh_token=provider_tokens.refresh_token,
+					token_expires_at=datetime.now() + timedelta(seconds=(provider_tokens.expires_in - 5)),
+				)
+				oauth_connection.save()
+
+				auth_token, created = Token.objects.get_or_create(user=user)
+
+				return Response(
+					{
+						'message': f'Successfully connected with {MUSIC_PROVIDERS[provider]}. (new user)',
+						'auth_token': auth_token.key,
+					},
+					status=status.HTTP_201_CREATED,
+				)
 
 		except OAuthState.DoesNotExist:
 			print(f'OAuthState does not exist for state: {state}')
