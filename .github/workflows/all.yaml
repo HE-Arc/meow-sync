@@ -8,6 +8,8 @@ on:
     branches:
       - main
       - dev
+      - features/**
+      - feature/**
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
