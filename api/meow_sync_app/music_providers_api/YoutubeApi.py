@@ -1,15 +1,98 @@
+import http
+import os
+
+from dotenv import load_dotenv
 import requests
 from .ApiInterface import *
 from typing import Any
 
-
 class YoutubeApi(ApiInterface):
+    CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID")
+    CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET")
+    REDIRECT_URI= os.getenv("YOUTUBE_REDIRECT_URI")
+
+    AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+    TOKEN_URL = "https://oauth2.googleapis.com/token"
     API_BASE_URL = "https://www.googleapis.com/youtube/v3"
+
+    @classmethod
+    def login_url(self, state: str) -> str:
+        scope = "https://www.googleapis.com/auth/youtube"
+
+        # access_type
+        auth_params = {
+            "state": state,
+            "response_type": "code",
+            "client_id": self.CLIENT_ID,
+            "scope": scope,
+            "redirect_uri": self.REDIRECT_URI,
+            "access_type": "offline"
+        }
+
+        return requests.Request("GET", self.AUTH_URL, params=auth_params).prepare().url
+    
+    @classmethod
+    def get_tokens(self, code: str) -> ApiTokens:
+        
+        code = code
+        id_client = self.CLIENT_ID
+        secret_client = self.CLIENT_SECRET
+        grant_type = "authorization_code"
+        redirect_uri = self.REDIRECT_URI
+
+        response = requests.post(self.TOKEN_URL, data={
+            "client_id": id_client,
+            "client_secret": secret_client,
+            "grant_type": grant_type,
+            "code": code,
+            "redirect_uri": redirect_uri
+        })
+        token_info = response.json()
+        print(f"Token response: {token_info}")
+
+        access_token = token_info["access_token"]
+        refresh_token = token_info["refresh_token"]
+        expires_in = token_info["expires_in"]
+
+        return ApiTokens(access_token=access_token, refresh_token=refresh_token, expires_in=expires_in)
+
     def __init__(self, access_token):
         self.HEADERS = {
             "Authorization": f"Bearer {access_token}"
         }
-        super().__init__()
+        
+    def get_current_user(self) -> ApiResponse[ApiUser]:
+        CURRENT_USER_URL = f'{self.API_BASE_URL}/channels?part=snippet&mine=true'
+
+        current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
+
+        # Youtube API error
+        if current_user_response.status_code != 200:
+            return ApiResponse[ApiUser](
+                success=False,
+                message=data['error']['message'],
+                status_code=current_user_response.status_code,
+                data=None
+            )
+
+        try:
+            data = current_user_response.json()
+
+            return ApiResponse[ApiUser](
+                success=True,
+                message="",
+                status_code=current_user_response.status_code,
+                data=ApiUser(name=data['items'][0]['snippet']['title'], user_id=data['items'][0]['id'])
+            )
+
+        except:
+            return ApiResponse[list[ApiPlaylist]](
+                success=False,
+                message="Error parsing response JSON",
+                status_code=current_user_response.status_code,
+                data=current_user_response.text
+            )
+
 
     def search_song(self, query: str):
         # TODO
