@@ -193,7 +193,7 @@ class OAuthCallbackView(APIView):
 			return Response(
 				{
 					'message': f'Successfully connected with {MUSIC_PROVIDERS[provider]}.',
-					# 'auth_token': auth_token.key,
+					'auth_token': auth_token.key,
 				},
 				status=status.HTTP_201_CREATED,
 			)

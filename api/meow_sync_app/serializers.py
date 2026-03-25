@@ -24,7 +24,7 @@ class OAuthLoginResponseSerializer(serializers.Serializer):
 
 class OAuthCallbackSuccessSerializer(serializers.Serializer):
 	message = serializers.CharField()
-	# auth_token = serializers.CharField()
+	auth_token = serializers.CharField()
 
 
 class OAuthMessageSerializer(serializers.Serializer):
