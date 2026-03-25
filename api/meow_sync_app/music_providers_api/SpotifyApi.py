@@ -1,10 +1,8 @@
 import os
+import base64
 import requests
-from dotenv import load_dotenv
 
 from .ApiInterface import *
-
-load_dotenv()
 
 class SpotifyApi(ApiInterface):
     CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
@@ -13,32 +11,32 @@ class SpotifyApi(ApiInterface):
     AUTH_URL = "https://accounts.spotify.com/authorize"
     TOKEN_URL = "https://accounts.spotify.com/api/token"
     API_BASE_URL = "https://api.spotify.com/v1"
-    REDIRECT_URI = "https://https://meow.k8s.ing.he-arc.ch/api/oauth/callback"
+    REDIRECT_URI = "http://127.0.0.1:8000/spotify/callback"
 
     @classmethod
-    def login_url(state: str) -> str:
+    def login_url(self, state: str) -> str:
         scope = "playlist-read-private,playlist-read-collaborative,playlist-modify-public,playlist-modify-private"
 
         params = {
             "response_type": "code",
-            "client_id": CLIENT_ID,
+            "client_id": self.CLIENT_ID,
             "scope": scope,
-            "redirect_uri": REDIRECT_URI,
+            "redirect_uri": self.REDIRECT_URI,
             "state": state,
         }
 
-        return requests.Request("GET", AUTH_URL, params=params).prepare().url
+        return requests.Request("GET", self.AUTH_URL, params=params).prepare().url
 
     @classmethod
-    def get_tokens(code: str) -> ApiTokens:
+    def get_tokens(self, code: str) -> ApiTokens:
         auth_header = base64.b64encode(
-            f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
+            f"{self.CLIENT_ID}:{self.CLIENT_SECRET}".encode()
         ).decode()
 
         token_data = {
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": REDIRECT_URI,
+            "redirect_uri": self.REDIRECT_URI,
         }
 
         token_headers = {
@@ -46,8 +44,10 @@ class SpotifyApi(ApiInterface):
             "Content-Type": "application/x-www-form-urlencoded",
         }
 
-        response = requests.post(TOKEN_URL, data=token_data, headers=token_headers)
+        response = requests.post(self.TOKEN_URL, data=token_data, headers=token_headers)
         token_info = response.json()
+
+        print(token_info)
 
         access_token = token_info["access_token"]
         refresh_token = token_info["refresh_token"]
@@ -64,33 +64,33 @@ class SpotifyApi(ApiInterface):
     def get_current_user(self) -> ApiResponse[ApiUser]:
         CURRENT_USER_URL = f'{self.API_BASE_URL}/me'
 
-        current_user_response = requests.get(request_url, headers=self.HEADERS)
+        current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
 
         # Spotify API error
-        if playlist_response.status_code != 200:
+        if current_user_response.status_code != 200:
             return ApiResponse[ApiUser](
                 success=False,
                 message=data['error']['message'],
-                status_code=playlist_response.status_code,
+                status_code=current_user_response.status_code,
                 data=None
             )
 
         try:
-            data = playlist_response.json()
+            data = current_user_response.json()
 
             return ApiResponse[ApiUser](
                 success=True,
                 message="",
-                status_code=playlist_response.status_code,
+                status_code=current_user_response.status_code,
                 data=ApiUser(name=data['display_name'], user_id=data['id'])
             )
 
         except:
-            return ApiResponse[list[ApiPlaylist]](
+            return ApiResponse[ApiUser](
                 success=False,
                 message="Error parsing response JSON",
-                status_code=playlist_response.status_code,
-                data=playlist_response.text
+                status_code=current_user_response.status_code,
+                data=current_user_response.text
             )
 
     def get_all_playlists(self) -> ApiResponse[list[ApiPlaylist]]:

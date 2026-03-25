@@ -25,13 +25,13 @@ class OAuthConnection(AbstractBaseModel):
 	access_token = models.CharField(max_length=255)
 	refresh_token = models.CharField(max_length=255)
 	token_expires_at = models.DateTimeField()
-	extra_data = models.JSONField()
+	extra_data = models.JSONField(null=True)
 
 
 class OAuthState(AbstractBaseModel):
 	"Used to keep track of user on OAuth callback."
 
-	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True)
 	state = models.CharField(max_length=255, unique=True)
 	provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
 

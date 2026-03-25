@@ -50,11 +50,11 @@ class ApiResponse(Generic[T]):
 
 class ApiInterface:
     @classmethod
-    def login_url(state: str) -> str:
+    def login_url(self, state: str) -> str:
         raise ValueError('Method not implemented, this is an abstract class ApiInterface')
     
     @classmethod
-    def get_tokens(code: str) -> ApiTokens:
+    def get_tokens(self, code: str) -> ApiTokens:
         raise ValueError('Method not implemented, this is an abstract class ApiInterface')
 
     def __init__(self, access_token: str):
