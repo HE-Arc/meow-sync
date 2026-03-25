@@ -22,7 +22,7 @@ const router = createRouter({
 			path: "/playlists",
 			name: "playlists",
 			props: true,
-			//meta: { requiresAuth: true }, //TODO: Uncomment when authentication is implemented
+			meta: { requiresAuth: true },
 			children: [
 				{
 					path: "view",
@@ -52,9 +52,6 @@ const router = createRouter({
 		{
 			path: "/about",
 			name: "about",
-			// route level code-splitting
-			// this generates a separate chunk (About.[hash].js) for this route
-			// which is lazy-loaded when the route is visited.
 			component: () => import("../views/AboutView.vue"),
 		},
 		{
@@ -76,15 +73,17 @@ const router = createRouter({
 	],
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
 	const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
-	const isAuthenticated = !!localStorage.getItem("access_token");
-
-	if (requiresAuth && !isAuthenticated) {
-		next("/403");
-	} else {
-		next();
+	if (requiresAuth) {
+		const { useAuthStore } = await import("@/stores/auth");
+		const { isAuthenticated } = useAuthStore();
+		if (!isAuthenticated) {
+			next("/");
+			return;
+		}
 	}
+	next();
 });
 
 export default router;
