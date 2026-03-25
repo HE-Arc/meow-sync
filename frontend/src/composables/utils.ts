@@ -1,3 +1,5 @@
+import type { useToast } from "@nuxt/ui/runtime/composables/index.js";
+
 type ApiError = {
 	code: string;
 	detail: string;
