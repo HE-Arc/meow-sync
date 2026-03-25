@@ -166,7 +166,7 @@ class OAuthCallbackView(APIView):
 							  # replace spaces with '_'
 							:245
 						]  # truncate string
-						+ random_str_alphanum(4)
+						+ '_' + random_str_alphanum(4)
 					)  # some randomness for users with same name
 
 				user = User.objects.create(
