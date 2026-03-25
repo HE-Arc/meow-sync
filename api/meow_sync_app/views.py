@@ -92,14 +92,14 @@ class OAuthLoginView(APIView):
 
 		oauth_state = OAuthState(
 			user=request.user if request.user.is_authenticated else None, 
-            provider=provider, 
-            state=random_str_alphanum(250)
+			provider=provider, 
+			state=random_str_alphanum(250)
 		)
 		oauth_state.save()
 
-        provider_api_class = get_api_interface_class_for_provider(
-            oauth_state.provider
-        )
+		provider_api_class = get_api_interface_class_for_provider(
+			oauth_state.provider
+		)
 
 		return Response(
 			{
