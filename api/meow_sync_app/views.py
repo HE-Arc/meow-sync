@@ -82,8 +82,6 @@ def get_api_interface_class_for_provider(provider: str) -> ApiInterface | None:
 	)
 )
 class OAuthLoginView(APIView):
-	authentication_classes = [BasicAuthentication]
-
 	def get(self, request, provider: str) -> Response:
 		if provider not in MUSIC_PROVIDERS.keys():
 			raise serializers.ValidationError(
@@ -91,15 +89,13 @@ class OAuthLoginView(APIView):
 			)
 
 		oauth_state = OAuthState(
-			user=request.user if request.user.is_authenticated else None, 
-			provider=provider, 
-			state=random_str_alphanum(250)
+			user=request.user if request.user.is_authenticated else None,
+			provider=provider,
+			state=random_str_alphanum(250),
 		)
 		oauth_state.save()
 
-		provider_api_class = get_api_interface_class_for_provider(
-			oauth_state.provider
-		)
+		provider_api_class = get_api_interface_class_for_provider(oauth_state.provider)
 
 		return Response(
 			{
@@ -160,18 +156,22 @@ class OAuthCallbackView(APIView):
 			try:
 				# existing connection
 				oauth_connection = OAuthConnection.objects.get(
-					provider=provider,
-					provider_user_id=provider_user_response.data.id
+					provider=provider, provider_user_id=provider_user_response.data.id
 				)
 
 				current_user = request.user if request.user.is_authenticated else None
 				# sync users when connecting with a second social provider
-				if current_user and current_user.username != oauth_connection.user.username:
+				if (
+					current_user
+					and current_user.username != oauth_connection.user.username
+				):
 					oauth_connection.user = current_user
-				
+
 				oauth_connection.access_token = provider_tokens.access_token
 				oauth_connection.refresh_token = provider_tokens.refresh_token
-				oauth_connection.token_expires_at = datetime.now() + timedelta(seconds=(provider_tokens.expires_in - 5))
+				oauth_connection.token_expires_at = datetime.now() + timedelta(
+					seconds=(provider_tokens.expires_in - 5)
+				)
 				oauth_connection.save()
 
 				user = oauth_connection.user
@@ -199,7 +199,8 @@ class OAuthCallbackView(APIView):
 								# replace spaces with '_'
 								:245
 							]  # truncate string
-							+ '_' + random_str_alphanum(4)
+							+ '_'
+							+ random_str_alphanum(4)
 						)  # some randomness for users with same name
 
 					user = User.objects.create(
@@ -216,7 +217,8 @@ class OAuthCallbackView(APIView):
 					provider_user_id=provider_user_response.data.id,
 					access_token=provider_tokens.access_token,
 					refresh_token=provider_tokens.refresh_token,
-					token_expires_at=datetime.now() + timedelta(seconds=(provider_tokens.expires_in - 5)),
+					token_expires_at=datetime.now()
+					+ timedelta(seconds=(provider_tokens.expires_in - 5)),
 				)
 				oauth_connection.save()
 
@@ -263,7 +265,6 @@ class OAuthCallbackView(APIView):
 	)
 )
 class OAuthDisconnectView(APIView):
-	authentication_classes = [BasicAuthentication]
 	permission_classes = [IsAuthenticated]
 
 	def delete(self, request, provider: str):

@@ -153,6 +153,10 @@ STATIC_ROOT = BASE_DIR / 'static'
 REST_FRAMEWORK = {
 	'EXCEPTION_HANDLER': 'drf_standardized_errors.handler.exception_handler',
 	'DEFAULT_SCHEMA_CLASS': 'drf_standardized_errors.openapi.AutoSchema',
+	'DEFAULT_AUTHENTICATION_CLASSES': [
+		'rest_framework.authentication.TokenAuthentication',
+		'rest_framework.authentication.SessionAuthentication',
+	],
 }
 
 SPECTACULAR_SETTINGS = {
