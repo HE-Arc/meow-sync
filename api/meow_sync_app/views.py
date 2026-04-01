@@ -2,7 +2,7 @@ import random
 import string
 import rest_framework.viewsets
 from datetime import datetime, timedelta
-from .models import Comment, OAuthState, OAuthConnection, MUSIC_PROVIDERS
+from .models import Comment, OAuthState, OAuthConnection, MusicProvider
 from .serializers import (
 	CommentSerializer,
 	OAuthCallbackSuccessSerializer,
@@ -37,7 +37,7 @@ PROVIDER_PARAMETER = OpenApiParameter(
 	type=str,
 	location=OpenApiParameter.PATH,
 	required=True,
-	enum=list(MUSIC_PROVIDERS.keys()),
+	enum=list(MusicProvider.values),
 	description='Music provider identifier.',
 )
 
@@ -91,9 +91,9 @@ class OAuthLoginView(APIView):
 	authentication_classes = [TokenAuthentication, BasicAuthentication]
 
 	def get(self, request, provider: str) -> Response:
-		if provider not in MUSIC_PROVIDERS.keys():
+		if provider not in MusicProvider.values:
 			raise serializers.ValidationError(
-				f'This field must be an valid provider. providers: {" ".join(MUSIC_PROVIDERS.keys())}'
+				f'This field must be an valid provider. providers: {" ".join(MusicProvider.values)}'
 			)
 
 		oauth_state = OAuthState(
@@ -174,6 +174,16 @@ class OAuthCallbackView(APIView):
 					status=provider_user_response.status_code,
 				)
 			try:
+				if not provider_user_response.data:
+					print(
+						f'Provider {oauth_state.provider} returned success but no user data.'
+					)
+					return Response(
+						{
+							'message': f'Provider {oauth_state.provider} returned success but no user data.'
+						},
+						status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+					)
 				# existing connection
 				oauth_connection = OAuthConnection.objects.get(
 					provider=provider, provider_user_id=provider_user_response.data.id
@@ -199,7 +209,7 @@ class OAuthCallbackView(APIView):
 
 				return Response(
 					{
-						'message': f'Successfully connected with {MUSIC_PROVIDERS[provider]}. (existing user)',
+						'message': f'Successfully connected with {MusicProvider(provider).label}. (existing user)',
 						'auth_token': auth_token.key,
 					},
 					status=status.HTTP_201_CREATED,
@@ -210,6 +220,11 @@ class OAuthCallbackView(APIView):
 				if not oauth_state.user:
 					username = f'user_{random_str_alphanum(12)}'
 					# set username from name on provider platform if available
+					if not provider_user_response.data:
+						raise ValueError(
+							'Provider user response was successful but contained no data.'
+						)
+
 					if provider_user_response.data.name:
 						username = (
 							provider_user_response.data.name[:240]
@@ -231,6 +246,11 @@ class OAuthCallbackView(APIView):
 					oauth_state.save()
 
 				user = oauth_state.user
+				if not provider_user_response.data:
+					raise ValueError(
+						'Provider user response was successful but contained no data.'
+					)
+
 				oauth_connection = OAuthConnection(
 					user=user,
 					provider=oauth_state.provider,
@@ -246,7 +266,7 @@ class OAuthCallbackView(APIView):
 
 				return Response(
 					{
-						'message': f'Successfully connected with {MUSIC_PROVIDERS[provider]}. (new user)',
+						'message': f'Successfully connected with {MusicProvider(provider).label}. (new user)',
 						'auth_token': auth_token.key,
 					},
 					status=status.HTTP_201_CREATED,
@@ -289,9 +309,9 @@ class OAuthDisconnectView(APIView):
 	permission_classes = [IsAuthenticated]
 
 	def delete(self, request, provider: str):
-		if provider not in MUSIC_PROVIDERS.keys():
+		if provider not in MusicProvider.values:
 			raise serializers.ValidationError(
-				f'This field must be an valid provider. providers: {" ".join(MUSIC_PROVIDERS.keys())}'
+				f'This field must be an valid provider. providers: {" ".join(MusicProvider.values)}'
 			)
 
 		current_user = request.user
