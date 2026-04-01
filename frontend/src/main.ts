@@ -32,13 +32,33 @@ app.use(PiniaColada, {
 						.join("\n");
 					toast.add({
 						title: `Error ${error.status}`,
+						icon: "lucide:octagon-x",
 						description: errorDetails || "An error occurred.",
 						color: "error",
 					});
+				} else if (error instanceof TypeError) {
+					if (error.message.includes("NetworkError")) {
+						toast.add({
+							title: "Error",
+							icon: "lucide:wifi-off",
+							description: "Failed to contact backend server.",
+							color: "error",
+						});
+					} else {
+						toast.add({
+							title: "Error",
+							icon: "lucide:octagon-x",
+							description: error.message,
+							color: "error",
+						});
+						console.error("An unexpected error occurred:", error);
+					}
 				} else {
+					console.error("An unexpected error occurred:", error);
 					toast.add({
 						title: "Error",
-						description: "An error occurred while processing your request.",
+						icon: "lucide:octagon-x",
+						description: "An unexpected error occurred.",
 						color: "error",
 					});
 				}
