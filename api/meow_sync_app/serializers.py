@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Comment, MUSIC_PROVIDERS
+from .models import Comment, MusicProvider
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -9,7 +9,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class OAuthLoginResponseSerializer(serializers.Serializer):
-	provider = serializers.ChoiceField(choices=tuple(MUSIC_PROVIDERS.keys()))
+	provider = serializers.ChoiceField(choices=tuple(MusicProvider.values))
 	state = serializers.CharField()
 	login_url = serializers.URLField()
 
