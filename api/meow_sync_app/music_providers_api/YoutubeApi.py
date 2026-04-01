@@ -9,6 +9,7 @@ from .ApiInterface import (
 	ApiTokens,
 	ApiPlaylist,
 	ApiSong,
+	ApiSearchQuery,
 )
 from typing import Any
 
@@ -107,10 +108,6 @@ class YoutubeApi(ApiInterface):
 				user_id=data['items'][0]['id'],
 			),
 		)
-
-	def search_song(self, query: str):
-		# TODO
-		pass
 
 	def _parse_playlist(self, apiPlaylist: dict) -> ApiPlaylist:
 		return ApiPlaylist(
@@ -351,3 +348,54 @@ class YoutubeApi(ApiInterface):
 			data=playlist,
 			message='Successfully created playlist',
 		)
+
+	def _build_search_query(self, query: ApiSearchQuery) -> str:
+		return f'"{query.artist_name}" "{query.song_title}"'
+
+	def search_song(self, query: ApiSearchQuery) -> ApiSuccess[list[ApiSong]] | ApiError:
+		request_url = f'{self.API_BASE_URL}/search'
+
+		response = requests.get(request_url, headers=self.HEADERS, params={'q': self._build_search_query(query), 'type': 'video', 'part': 'snippet', 'maxResults': 5, 'regionCode': 'CH'})
+		
+		try:
+			data = response.json()
+			print(f'Search response data: {data}')
+		except Exception as e:
+			print(f'Error parsing Youtube search query response JSON: {e}')
+			return ApiError(
+				status_code=response.status_code,
+				message='Failed to parse JSON',
+			)
+
+		# Youtube API error
+		if response.status_code != 200:
+			return ApiError(
+				status_code=response.status_code,
+				message='Youtube API Error',
+			)
+		
+		result: list[ApiSong] = []
+
+		try:
+			tracks = data['items']
+			for track in tracks:
+				result.append(ApiSong(
+					song_id=track['id']['videoId'],
+					title=track['snippet']['title'],
+					artist=track['snippet']['channelTitle'],
+					image_url=track['snippet']['thumbnails']['default']['url'] if track['snippet']['thumbnails'] and track['snippet']['thumbnails']['default'] else None,
+					release_date=track['snippet']['publishedAt'],
+					duration_ms=0,
+				))
+			print(f'Parsed search results: {len(result)} songs')
+		except Exception as e:
+			return ApiError(
+				status_code=500,
+				message=f'Error parsing song list. Exception: {e}',
+			)
+		return ApiSuccess(
+			status_code=200,
+			data=result,
+			message="Successfully retrieved songs"
+		)
+		
