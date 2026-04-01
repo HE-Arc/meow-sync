@@ -120,7 +120,7 @@ class ApiInterface:
 			'Method not implemented, this is an abstract class ApiInterface'
 		)
 
-	def search_song(self, query: ApiSearchQuery):
+	def search_song(self, query: ApiSearchQuery) -> ApiSuccess[list[ApiSong]] | ApiError:
 		raise ValueError(
 			'Method not implemented, this is an abstract class ApiInterface'
 		)
