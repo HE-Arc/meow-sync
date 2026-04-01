@@ -38,5 +38,13 @@ class MeSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = User
-		fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined', 'connections']
+		fields = [
+			'id',
+			'username',
+			'email',
+			'first_name',
+			'last_name',
+			'date_joined',
+			'connections',
+		]
 		read_only_fields = fields
