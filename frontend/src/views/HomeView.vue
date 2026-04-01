@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useGetLoginUrlAndRedirect } from "@/composables/useAuth";
+import { useUserInfo } from "@/composables/useUserInfo";
 import {
   ProvidersInformations,
   type SyncProvider,
@@ -7,6 +8,7 @@ import {
 } from "@/types/SyncProviders";
 
 const { login } = useGetLoginUrlAndRedirect();
+const { user } = useUserInfo();
 
 function handleLogin(
   provider: SyncProvider,
@@ -23,9 +25,22 @@ function handleLogin(
       Your ultimate playlist synchronization tool.
     </p>
     <div class="flex space-x-4 flex-col gap-2 items-center justify-center">
+      <div v-if="user">
+        <p class="text-xl">
+          Go to your
+          <RouterLink to="/settings" class="text-primary hover:underline"
+            >settings</RouterLink
+          >
+          to manage your connections or create a
+          <RouterLink to="/sync" class="text-primary hover:underline"
+            >new sync</RouterLink
+          >.
+        </p>
+      </div>
       <UButton
         type="button"
         :icon="syncProvider.icon"
+        v-else
         v-for="(syncProvider, provider) in ProvidersInformations"
         :key="provider"
         @click="handleLogin(provider, syncProvider)"
