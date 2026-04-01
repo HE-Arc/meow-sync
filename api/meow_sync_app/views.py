@@ -195,9 +195,9 @@ class OAuthCallbackView(APIView):
 						status=status.HTTP_500_INTERNAL_SERVER_ERROR,
 					)
 				# existing connection
-				oauth_connection = OAuthConnection.objects.get(
+				oauth_connection = OAuthConnection.objects.filter(
 					provider=provider, provider_user_id=provider_user_response.data.id
-				)
+				).first()
 
 				current_user = request.user if request.user.is_authenticated else None
 				# sync users when connecting with a second social provider
