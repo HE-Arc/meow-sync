@@ -10,6 +10,7 @@ from .ApiInterface import (
 	ApiTokens,
 	ApiPlaylist,
 	ApiSong,
+	ApiSearchQuery,
 )
 
 
@@ -363,5 +364,5 @@ class SpotifyApi(ApiInterface):
 		)
 
 	def search_song(self, query: str):
-		# TODO
+		# 
 		pass
