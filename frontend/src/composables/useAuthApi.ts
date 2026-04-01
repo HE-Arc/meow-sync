@@ -3,7 +3,7 @@ import { client } from "@/api/client";
 import type { components } from "@/api/schema.d.ts";
 import { type BasicApiResponse, handleFetchErrors } from "./utils";
 
-export type ProviderEnum = components["schemas"]["ProviderEnum"];
+export type ProviderEnum = components["schemas"]["OAuthConnectionProviderEnum"];
 export type OAuthLoginResponse = components["schemas"]["OAuthLoginResponse"];
 export type OAuthCallbackSuccess =
 	components["schemas"]["OAuthCallbackSuccess"];
