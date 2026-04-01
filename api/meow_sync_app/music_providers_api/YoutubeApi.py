@@ -385,7 +385,7 @@ class YoutubeApi(ApiInterface):
 					artist=track['snippet']['channelTitle'],
 					image_url=track['snippet']['thumbnails']['default']['url'] if track['snippet']['thumbnails'] and track['snippet']['thumbnails']['default'] else None,
 					release_date=track['snippet']['publishedAt'],
-					duration_ms=0,
+					duration_ms=-1,
 				))
 			print(f'Parsed search results: {len(result)} songs')
 		except Exception as e:

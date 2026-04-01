@@ -217,6 +217,9 @@ class OAuthCallbackView(APIView):
 					provider=provider, provider_user_id=provider_user_response.data.id
 				).first()
 
+				if oauth_connection is None:
+					raise OAuthConnection.DoesNotExist
+
 				current_user = request.user if request.user.is_authenticated else None
 				# sync users when connecting with a second social provider
 				if (
