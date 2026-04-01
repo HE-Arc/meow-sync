@@ -93,8 +93,8 @@ class ApiError(ApiResponse):
 
 class ApiSearchQuery:
 	def __init__(self, artist_name: str, song_title: str):
-		self.artist_name: str = artist_name
-		self.song_title: str = song_title
+		self.artist_name: str = artist_name.strip()
+		self.song_title: str = song_title.strip()
 
 class ApiInterface:
 	@classmethod

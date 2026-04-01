@@ -365,7 +365,7 @@ class SpotifyApi(ApiInterface):
 		)
 
 	def _song_query_string(self, artist_name: str, song_title: str) -> str:
-		return f"artist:{artist_name} track:{song_title}"
+		return f"track:{song_title} artist:{artist_name}"
 
 	def search_song(self, query: ApiSearchQuery) -> ApiSuccess[list[ApiSong]] | ApiError:
 		request_url = f'{self.API_BASE_URL}/search'
@@ -375,7 +375,7 @@ class SpotifyApi(ApiInterface):
 				song_title=query.song_title,
 			),
 			'type': 'track',
-			'market': SEARCH_QUERY_MARKET,
+			'market': self.SEARCH_QUERY_MARKET,
 			'offset': 0,
 			'limit': 10,
 		}
@@ -392,7 +392,7 @@ class SpotifyApi(ApiInterface):
 			)
 
 		# Spotify API error
-		if response.status_code != 201:
+		if response.status_code != 200:
 			return ApiError(
 				status_code=response.status_code,
 				message='Spotify API Error',
@@ -414,12 +414,13 @@ class SpotifyApi(ApiInterface):
 					if track['album']['images']
 					and track['album']['images'][0]
 					else None,
-					release_date=['album']['release_date'],
+					release_date=track['album']['release_date'],
 				))
 		except Exception as e:
+			raise e
 			return ApiError(
 				status_code=500,
-				message='Error parsing song list. Exception: {e}',
+				message=f'Error parsing song list. Exception: {e}',
 			)
 		return ApiSuccess(
 			status_code=200,
