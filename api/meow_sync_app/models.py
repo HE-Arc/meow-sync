@@ -30,7 +30,9 @@ class OAuthConnection(AbstractBaseModel):
 class OAuthState(AbstractBaseModel):
 	"Used to keep track of user on OAuth callback."
 
-	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True)
+	user = models.ForeignKey(
+		settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True
+	)
 	state = models.CharField(max_length=255, unique=True)
 	provider = models.CharField(max_length=255, choices=MusicProvider.choices)
 

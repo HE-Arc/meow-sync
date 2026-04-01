@@ -38,8 +38,14 @@ urlpatterns = [
 		name='swagger-ui',
 	),
 	# TODO: move to main app
-	path('api/oauth/<str:provider>/login/', OAuthLoginView.as_view(), name='oauth-login'),
-	path('api/oauth/<str:provider>/callback/', OAuthCallbackView.as_view(), name='oauth-callback'),
+	path(
+		'api/oauth/<str:provider>/login/', OAuthLoginView.as_view(), name='oauth-login'
+	),
+	path(
+		'api/oauth/<str:provider>/callback/',
+		OAuthCallbackView.as_view(),
+		name='oauth-callback',
+	),
 	path(
 		'api/oauth/<str:provider>/disconnect/',
 		OAuthDisconnectView.as_view(),

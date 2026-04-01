@@ -6,16 +6,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+	dependencies = [
+		(
+			'meow_sync_app',
+			'0003_oauthconnection_provider_user_id_alter_comment_user_and_more',
+		),
+		migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+	]
 
-    dependencies = [
-        ('meow_sync_app', '0003_oauthconnection_provider_user_id_alter_comment_user_and_more'),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-    ]
-
-    operations = [
-        migrations.AlterField(
-            model_name='oauthstate',
-            name='user',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
-        ),
-    ]
+	operations = [
+		migrations.AlterField(
+			model_name='oauthstate',
+			name='user',
+			field=models.ForeignKey(
+				null=True,
+				on_delete=django.db.models.deletion.CASCADE,
+				to=settings.AUTH_USER_MODEL,
+			),
+		),
+	]

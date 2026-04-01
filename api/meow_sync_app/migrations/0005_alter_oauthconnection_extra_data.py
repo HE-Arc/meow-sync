@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+	dependencies = [
+		('meow_sync_app', '0004_alter_oauthstate_user'),
+	]
 
-    dependencies = [
-        ('meow_sync_app', '0004_alter_oauthstate_user'),
-    ]
-
-    operations = [
-        migrations.AlterField(
-            model_name='oauthconnection',
-            name='extra_data',
-            field=models.JSONField(null=True),
-        ),
-    ]
+	operations = [
+		migrations.AlterField(
+			model_name='oauthconnection',
+			name='extra_data',
+			field=models.JSONField(null=True),
+		),
+	]

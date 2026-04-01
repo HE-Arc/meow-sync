@@ -318,7 +318,9 @@ class SpotifyApi(ApiInterface):
 			message='Successfully removed songs from playlist',
 		)
 
-	def create_playlist(self, playlist: ApiPlaylist) -> ApiSuccess[ApiPlaylist] | ApiError:
+	def create_playlist(
+		self, playlist: ApiPlaylist
+	) -> ApiSuccess[ApiPlaylist] | ApiError:
 		request_url = f'{self.API_BASE_URL}/me/playlists'
 		PLAYLIST_PUBLIC = False
 		PLAYLIST_COLLABORATIVE = False
