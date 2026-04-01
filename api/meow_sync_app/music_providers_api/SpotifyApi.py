@@ -2,364 +2,364 @@ import os
 import base64
 import requests
 
-from .ApiInterface import *
+from .ApiInterface import (
+	ApiInterface,
+	ApiSuccess,
+	ApiError,
+	ApiUser,
+	ApiTokens,
+	ApiPlaylist,
+	ApiSong,
+)
+
 
 class SpotifyApi(ApiInterface):
-    CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-    CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-    REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
+	CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+	CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
+	REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
 
-    AUTH_URL = "https://accounts.spotify.com/authorize"
-    TOKEN_URL = "https://accounts.spotify.com/api/token"
-    API_BASE_URL = "https://api.spotify.com/v1"
+	AUTH_URL = 'https://accounts.spotify.com/authorize'
+	TOKEN_URL = 'https://accounts.spotify.com/api/token'
+	API_BASE_URL = 'https://api.spotify.com/v1'
 
-    @classmethod
-    def login_url(self, state: str) -> str:
-        scope = "playlist-read-private,playlist-read-collaborative,playlist-modify-public,playlist-modify-private"
+	@classmethod
+	def login_url(cls, state: str) -> str:
+		scope = 'playlist-read-private,playlist-read-collaborative,playlist-modify-public,playlist-modify-private'
 
-        params = {
-            "response_type": "code",
-            "client_id": self.CLIENT_ID,
-            "scope": scope,
-            "redirect_uri": self.REDIRECT_URI,
-            "state": state,
-        }
+		params = {
+			'response_type': 'code',
+			'client_id': cls.CLIENT_ID,
+			'scope': scope,
+			'redirect_uri': cls.REDIRECT_URI,
+			'state': state,
+		}
 
-        return requests.Request("GET", self.AUTH_URL, params=params).prepare().url
+		url = requests.Request('GET', cls.AUTH_URL, params=params).prepare().url
+		if not url:
+			raise Exception('Failed to construct Spotify login URL')
+		return url
 
-    @classmethod
-    def get_tokens(self, code: str) -> ApiTokens:
-        auth_header = base64.b64encode(
-            f"{self.CLIENT_ID}:{self.CLIENT_SECRET}".encode()
-        ).decode()
+	@classmethod
+	def get_tokens(cls, code: str) -> ApiTokens:
+		auth_header = base64.b64encode(
+			f'{cls.CLIENT_ID}:{cls.CLIENT_SECRET}'.encode()
+		).decode()
 
-        token_data = {
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": self.REDIRECT_URI,
-        }
+		token_data = {
+			'grant_type': 'authorization_code',
+			'code': code,
+			'redirect_uri': cls.REDIRECT_URI,
+		}
 
-        token_headers = {
-            "Authorization": f"Basic {auth_header}",
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
+		token_headers = {
+			'Authorization': f'Basic {auth_header}',
+			'Content-Type': 'application/x-www-form-urlencoded',
+		}
 
-        response = requests.post(self.TOKEN_URL, data=token_data, headers=token_headers)
-        token_info = response.json()
+		response = requests.post(cls.TOKEN_URL, data=token_data, headers=token_headers)
+		token_info = response.json()
 
-        print(token_info)
+		print(token_info)
 
-        access_token = token_info["access_token"]
-        refresh_token = token_info["refresh_token"]
-        expires_in = token_info["expires_in"]
+		access_token = token_info['access_token']
+		refresh_token = token_info['refresh_token']
+		expires_in = token_info['expires_in']
 
-        return ApiTokens(access_token=access_token, refresh_token=refresh_token, expires_in=expires_in)
+		return ApiTokens(
+			access_token=access_token,
+			refresh_token=refresh_token,
+			expires_in=expires_in,
+		)
 
-    def __init__(self, access_token: str):
-        self.HEADERS = {
-            "Authorization": f"Bearer {access_token}"
-        }
-        self.MAX_SONG_CHUNK_SIZE = 100
+	def __init__(self, access_token: str):
+		self.HEADERS = {'Authorization': f'Bearer {access_token}'}
+		self.MAX_SONG_CHUNK_SIZE = 100
 
-    def get_current_user(self) -> ApiResponse[ApiUser]:
-        CURRENT_USER_URL = f'{self.API_BASE_URL}/me'
+	def get_current_user(self) -> ApiSuccess[ApiUser] | ApiError:
+		CURRENT_USER_URL = f'{self.API_BASE_URL}/me'
 
-        current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
+		current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
 
-        # Spotify API error
-        if current_user_response.status_code != 200:
-            return ApiResponse[ApiUser](
-                success=False,
-                message=data['error']['message'],
-                status_code=current_user_response.status_code,
-                data=None
-            )
+		try:
+			data = current_user_response.json()
+		except Exception as e:
+			print(f'Error parsing Spotify current user response JSON: {e}')
+			return ApiError(
+				status_code=current_user_response.status_code,
+				message='Error parsing response JSON',
+			)
 
-        try:
-            data = current_user_response.json()
+		# Spotify API error
+		if current_user_response.status_code != 200:
+			return ApiError(
+				status_code=current_user_response.status_code,
+				message=data.get('error', {}).get('message', 'Spotify API Error'),
+			)
 
-            return ApiResponse[ApiUser](
-                success=True,
-                message="",
-                status_code=current_user_response.status_code,
-                data=ApiUser(name=data['display_name'], user_id=data['id'])
-            )
+		return ApiSuccess(
+			status_code=current_user_response.status_code,
+			data=ApiUser(name=data['display_name'], user_id=data['id']),
+		)
 
-        except:
-            return ApiResponse[ApiUser](
-                success=False,
-                message="Error parsing response JSON",
-                status_code=current_user_response.status_code,
-                data=current_user_response.text
-            )
+	def get_all_playlists(self) -> ApiSuccess[list[ApiPlaylist]] | ApiError:
+		current_page_url = f'{self.API_BASE_URL}/me/playlists'
+		result: list[ApiPlaylist] = []
+		while True:
+			playlist_response = requests.get(current_page_url, headers=self.HEADERS)
+			# Invalid JSON error
+			try:
+				data = playlist_response.json()
+			except Exception as e:
+				print(f'Error parsing Spotify playlists response JSON: {e}')
+				return ApiError(
+					status_code=playlist_response.status_code,
+					message=f'Error parsing response JSON: "{playlist_response.text}"',
+				)
 
-    def get_all_playlists(self) -> ApiResponse[list[ApiPlaylist]]:
-        current_page_url = f"{self.API_BASE_URL}/me/playlists"
-        result: list[ApiPlaylist] = []
-        while True:
-            playlist_response = requests.get(current_page_url, headers=self.HEADERS)
-            # Invalid JSON error
-            try:
-                data = playlist_response.json()
-            except:
-                return ApiResponse[list[ApiPlaylist]](
-                    success=False,
-                    message="Error parsing response JSON",
-                    status_code=playlist_response.status_code,
-                    data=playlist_response.text
-                )
+			# Spotify API error
+			if playlist_response.status_code != 200:
+				return ApiError(
+					status_code=playlist_response.status_code,
+					message=data['error']['message'],
+				)
 
-            # Spotify API error
-            if playlist_response.status_code != 200:
-                return ApiResponse[list[ApiPlaylist]](
-                    success=False,
-                    message=data['error']['message'],
-                    status_code=playlist_response.status_code,
-                    data=[]
-                )
+			# Happy case
+			for playlist in data['items']:
+				songs: list[ApiSong] = []
 
-            # Happy case
-            for playlist in data['items']:
-                songs: list[ApiSong] = []
+				result.append(
+					ApiPlaylist(
+						playlist_id=playlist['id'],
+						title=playlist['name'],
+						description=playlist['description'],
+						author=playlist['owner']['display_name'],
+						image_url=playlist['images'][0]['url']
+						if playlist['images'] and playlist['images'][0]
+						else None,
+						songs=songs,
+					)
+				)
 
-                result.append(ApiPlaylist(
-                    playlist_id=playlist['id'],
-                    title=playlist['name'],
-                    description=playlist['description'],
-                    author=playlist['owner']['display_name'],
-                    image_url=playlist['images'][0]['url'] if playlist['images'] and playlist['images'][0] else None,
-                    songs=songs
-                ))
-            
-            if not data['next']:
-                break
-            current_page_url = data['next']
-            
-        
-        return ApiResponse[list[ApiPlaylist]](
-            success=True,
-            message="",
-            status_code=playlist_response.status_code,
-            data=result
-        )
+			if not data['next']:
+				break
+			current_page_url = data['next']
 
-    def _get_playlist_info(self, playlist_id: str) -> ApiPlaylist:
-        request_url = f"{self.API_BASE_URL}/playlists/{playlist_id}"
+		return ApiSuccess(
+			status_code=playlist_response.status_code,
+			data=result,
+		)
 
-        playlist_response = requests.get(request_url, headers=self.HEADERS)
+	def _get_playlist_info(self, playlist_id: str) -> ApiPlaylist:
+		request_url = f'{self.API_BASE_URL}/playlists/{playlist_id}'
 
-        data = playlist_response.json()
+		playlist_response = requests.get(request_url, headers=self.HEADERS)
 
-        # Spotify API error
-        if playlist_response.status_code != 200:
-            raise Exception(f"{data['error']['message']}, status_code: {playlist_response.status_code}")
-        
-        # Happy case
-        result = ApiPlaylist(
-            playlist_id=data['id'],
-            title=data['name'],
-            description=data['description'],
-            author=data['owner']['display_name'],
-            image_url=data['images'][0]['url'] if data['images'] and data['images'][0] else None,
-            songs=[]
-        )
+		data = playlist_response.json()
 
-        return result
+		# Spotify API error
+		if playlist_response.status_code != 200:
+			raise Exception(
+				f'{data["error"]["message"]}, status_code: {playlist_response.status_code}'
+			)
 
-    
-    def get_playlist(self, playlist_id: str) -> ApiResponse[ApiPlaylist]:
-        songs = []
-        current_song_page_url = f"{self.API_BASE_URL}/playlists/{playlist_id}/items"
+		# Happy case
+		result = ApiPlaylist(
+			playlist_id=data['id'],
+			title=data['name'],
+			description=data['description'],
+			author=data['owner']['display_name'],
+			image_url=data['images'][0]['url']
+			if data['images'] and data['images'][0]
+			else None,
+			songs=[],
+		)
 
-        try:
-            result = self._get_playlist_info(playlist_id)
-        except Exception as ex:
-            return ApiResponse[ApiPlaylist](
-                success=False,
-                message=ex.message,
-                status_code=0,
-                data=None
-            )
+		return result
 
-        # get playlist songs
-        while True:
-            playlist_songs_response = requests.get(current_song_page_url, headers=self.HEADERS)
-            # Invalid JSON error
-            try:
-                data = playlist_songs_response.json()
-            except:
-                return ApiResponse[ApiPlaylist](
-                    success=False,
-                    message="Error parsing response JSON",
-                    status_code=playlist_songs_response.status_code,
-                    data=None
-                )
+	def get_playlist(self, playlist_id: str) -> ApiSuccess[ApiPlaylist] | ApiError:
+		songs = []
+		current_song_page_url = f'{self.API_BASE_URL}/playlists/{playlist_id}/items'
 
-            # Spotify API error
-            if playlist_songs_response.status_code != 200:
-                return ApiResponse[ApiPlaylist](
-                    success=False,
-                    message=data['error']['message'] if data['message'] else "Spotify Api Error",
-                    status_code=playlist_songs_response.status_code,
-                    data=None
-                )
-            
-            # Happy case
-            for song in data['items']:
-                song_data = song['item']
-                songs.append(ApiSong(
-                    song_id=song_data['id'],
-                    title=song_data['name'],
-                    artist=', '.join(artist['name'] for artist in song_data['artists']),
-                    image_url=song_data['album']['images'][0]['url'] if song_data['album']['images'] and song_data['album']['images'][0] else None,
-                    release_date=song_data['album']['release_date'],
-                    duration_ms=song_data['duration_ms']
-                ))
-            if not data['next']:
-                break
-            current_song_page_url = data['next']
+		try:
+			result = self._get_playlist_info(playlist_id)
+		except Exception as ex:
+			return ApiError(status_code=0, message=str(ex))
 
-        result.songs = songs
+		# get playlist songs
+		while True:
+			playlist_songs_response = requests.get(
+				current_song_page_url, headers=self.HEADERS
+			)
+			# Invalid JSON error
+			try:
+				data = playlist_songs_response.json()
+			except Exception as e:
+				print(f'Error parsing Spotify playlist songs response JSON: {e}')
+				return ApiError(
+					status_code=playlist_songs_response.status_code,
+					message='Error parsing response JSON',
+				)
 
-        return ApiResponse(
-            success=True,
-            message="",
-            status_code=200,
-            data=result
-        )
-    
-    def _song_id_to_uri(self, song_ids: list[str]):
-        prefix = "spotify:track:"
-        result = list(map(lambda song : prefix + song, song_ids))
+			# Spotify API error
+			if playlist_songs_response.status_code != 200:
+				return ApiError(
+					status_code=playlist_songs_response.status_code,
+					message=data['error']['message']
+					if data.get('error')
+					else 'Spotify Api Error',
+				)
 
-        return result
+			# Happy case
+			for song in data['items']:
+				song_data = song['track']
+				songs.append(
+					ApiSong(
+						song_id=song_data['id'],
+						title=song_data['name'],
+						artist=', '.join(
+							artist['name'] for artist in song_data['artists']
+						),
+						image_url=song_data['album']['images'][0]['url']
+						if song_data['album']['images']
+						and song_data['album']['images'][0]
+						else None,
+						release_date=song_data['album']['release_date'],
+						duration_ms=song_data['duration_ms'],
+					)
+				)
+			if not data['next']:
+				break
+			current_song_page_url = data['next']
 
-    def _chunk_list(self, lst: list, chunk_size: int):
-        return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+		result.songs = songs
 
-    def add_to_playlist(self, playlist_id: str, song_ids: list[str]) -> ApiResponse[None]:
-        chunked_ids = self._chunk_list(song_ids, self.MAX_SONG_CHUNK_SIZE)
-        
-        for chunk in chunked_ids:
-            request_url = f"{self.API_BASE_URL}/playlists/{playlist_id}/items"
-            
-            request_body = {
-                "uris": self._song_id_to_uri(chunk)
-            }
+		return ApiSuccess(status_code=200, data=result)
 
-            response = requests.post(request_url, json=request_body, headers=self.HEADERS)
-            
-            try:
-                data = response.json()
-            except:
-                return ApiResponse[None](
-                    success=False,
-                    message="Error parsing response JSON",
-                    status_code=response.status_code,
-                    data=None
-                )
+	def _song_id_to_uri(self, song_ids: list[str]):
+		prefix = 'spotify:track:'
+		result = list(map(lambda song: prefix + song, song_ids))
 
-            # Spotify API error
-            if response.status_code != 201:
-                return ApiResponse[None](
-                    success=False,
-                    message=data['error']['message'],
-                    status_code=response.status_code,
-                    data=None
-                )
-        
-        return ApiResponse(
-            success=True,
-            message="Successfully added songs to playlist",
-            status_code=response.status_code,
-            data=None
-        )
-    
-    def remove_from_playlist(self, playlist_id: str, song_ids: list[str]) -> ApiResponse[None]:
-        chunked_ids = self._chunk_list(song_ids, self.MAX_SONG_CHUNK_SIZE)
-        
-        for chunk in chunked_ids:
-            request_url = f"{self.API_BASE_URL}/playlists/{playlist_id}/items"
-            
-            request_body = {
-                "items": [ { 'uri': uri } for uri in self._song_id_to_uri(chunk) ]
-            }
+		return result
 
-            response = requests.delete(request_url, json=request_body, headers=self.HEADERS)
-            
-            try:
-                data = response.json()
-            except:
-                return ApiResponse[None](
-                    success=False,
-                    message="Error parsing response JSON",
-                    status_code=response.status_code,
-                    data=None
-                )
+	def _chunk_list(self, lst: list, chunk_size: int):
+		return [lst[i : i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
-            # Spotify API error
-            if response.status_code != 200:
-                return ApiResponse[None](
-                    success=False,
-                    message=data['error']['message'],
-                    status_code=response.status_code,
-                    data=None
-                )
+	def add_to_playlist(
+		self, playlist_id: str, song_ids: list[str]
+	) -> ApiSuccess[None] | ApiError:
+		chunked_ids = self._chunk_list(song_ids, self.MAX_SONG_CHUNK_SIZE)
 
-        # Happy case
-        return ApiResponse[None](
-            success=True,
-            message="Successfully removed songs from playlist",
-            status_code=200,
-            data=None
-        )
-    
-    def create_playlist(self, playlist: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
-        request_url = f"{self.API_BASE_URL}/me/playlists"
-        PLAYLIST_PUBLIC = False
-        PLAYLIST_COLLABORATIVE = False
+		for chunk in chunked_ids:
+			request_url = f'{self.API_BASE_URL}/playlists/{playlist_id}/items'
 
-        request_body = {
-            'name': playlist.title,
-            'description': playlist.description,
-            'collaborative': PLAYLIST_COLLABORATIVE,
-            'public': PLAYLIST_PUBLIC,
-        }
+			request_body = {'uris': self._song_id_to_uri(chunk)}
 
-        response = requests.post(request_url, json=request_body, headers=self.HEADERS)
+			response = requests.post(
+				request_url, json=request_body, headers=self.HEADERS
+			)
 
-        # Json error
-        try:
-            data = response.json()
-        except:
-            return ApiResponse[None](
-                success=False,
-                message="Failed to parse JSON",
-                status_code=response.status_code,
-                data=None
-            )
+			try:
+				data = response.json()
+				# Spotify API error
+				if response.status_code != 201:
+					return ApiError(
+						status_code=response.status_code,
+						message=data['error']['message'],
+					)
+			except Exception as e:
+				print(f'Error parsing Spotify add to playlist response JSON: {e}')
+				return ApiError(
+					status_code=response.status_code,
+					message='Error parsing response JSON',
+				)
 
-        # Spotify API error
-        if response.status_code != 201:
-            return ApiResponse[None](
-                success=False,
-                message="Spotify API Error",
-                status_code=response.status_code,
-                data=None
-            )
-        
-        playlist.author = data['owner']['display_name']
-        playlist.id = data['id']
-        playlist.songs = []
+		return ApiSuccess(
+			status_code=201,
+			data=None,
+			message='Successfully added songs to playlist',
+		)
 
-        # Happy case
-        return ApiResponse[ApiPlaylist](
-            success=True,
-            message="Successfully created playlist",
-            status_code=response.status_code,
-            data=playlist
-        )
+	def remove_from_playlist(
+		self, playlist_id: str, song_ids: list[str]
+	) -> ApiSuccess[None] | ApiError:
+		chunked_ids = self._chunk_list(song_ids, self.MAX_SONG_CHUNK_SIZE)
 
-    def search_song(self, query: str):
-        # TODO
-        pass
+		for chunk in chunked_ids:
+			request_url = f'{self.API_BASE_URL}/playlists/{playlist_id}/items'
+
+			request_body = {
+				'items': [{'uri': uri} for uri in self._song_id_to_uri(chunk)]
+			}
+
+			response = requests.delete(
+				request_url, json=request_body, headers=self.HEADERS
+			)
+
+			try:
+				data = response.json()
+			except Exception as e:
+				print(f'Error parsing Spotify remove from playlist response JSON: {e}')
+				return ApiError(
+					status_code=response.status_code,
+					message='Error parsing response JSON',
+				)
+
+			# Spotify API error
+			if response.status_code != 200:
+				return ApiError(
+					status_code=response.status_code,
+					message=data['error']['message'],
+				)
+
+		# Happy case
+		return ApiSuccess(
+			status_code=200,
+			data=None,
+			message='Successfully removed songs from playlist',
+		)
+
+	def create_playlist(self, playlist: ApiPlaylist) -> ApiSuccess[ApiPlaylist] | ApiError:
+		request_url = f'{self.API_BASE_URL}/me/playlists'
+		PLAYLIST_PUBLIC = False
+		PLAYLIST_COLLABORATIVE = False
+
+		request_body = {
+			'name': playlist.title,
+			'description': playlist.description,
+			'collaborative': PLAYLIST_COLLABORATIVE,
+			'public': PLAYLIST_PUBLIC,
+		}
+
+		response = requests.post(request_url, json=request_body, headers=self.HEADERS)
+
+		# Json error
+		try:
+			data = response.json()
+		except Exception as e:
+			print(f'Error parsing Spotify create playlist response JSON: {e}')
+			return ApiError(
+				status_code=response.status_code,
+				message='Failed to parse JSON',
+			)
+
+		# Spotify API error
+		if response.status_code != 201:
+			return ApiError(
+				status_code=response.status_code,
+				message='Spotify API Error',
+			)
+
+		playlist.author = data['owner']['display_name']
+		playlist.id = data['id']
+		playlist.songs = []
+
+		# Happy case
+		return ApiSuccess(
+			status_code=response.status_code,
+			data=playlist,
+			message='Successfully created playlist',
+		)
+
+	def search_song(self, query: str):
+		# TODO
+		pass

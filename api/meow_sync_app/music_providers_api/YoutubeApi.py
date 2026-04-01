@@ -1,344 +1,353 @@
-import http
 import os
 
-from dotenv import load_dotenv
 import requests
-from .ApiInterface import *
+from .ApiInterface import (
+	ApiInterface,
+	ApiSuccess,
+	ApiError,
+	ApiUser,
+	ApiTokens,
+	ApiPlaylist,
+	ApiSong,
+)
 from typing import Any
 
+
 class YoutubeApi(ApiInterface):
-    CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID")
-    CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET")
-    REDIRECT_URI= os.getenv("YOUTUBE_REDIRECT_URI")
+	CLIENT_ID = os.getenv('YOUTUBE_CLIENT_ID')
+	CLIENT_SECRET = os.getenv('YOUTUBE_CLIENT_SECRET')
+	REDIRECT_URI = os.getenv('YOUTUBE_REDIRECT_URI')
 
-    AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-    TOKEN_URL = "https://oauth2.googleapis.com/token"
-    API_BASE_URL = "https://www.googleapis.com/youtube/v3"
+	AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+	TOKEN_URL = 'https://oauth2.googleapis.com/token'
+	API_BASE_URL = 'https://www.googleapis.com/youtube/v3'
 
-    @classmethod
-    def login_url(self, state: str) -> str:
-        scope = "https://www.googleapis.com/auth/youtube"
+	@classmethod
+	def login_url(cls, state: str) -> str:
+		scope = 'https://www.googleapis.com/auth/youtube'
 
-        # access_type
-        auth_params = {
-            "state": state,
-            "response_type": "code",
-            "client_id": self.CLIENT_ID,
-            "scope": scope,
-            "redirect_uri": self.REDIRECT_URI,
-            "access_type": "offline"
-        }
+		# access_type
+		auth_params = {
+			'state': state,
+			'response_type': 'code',
+			'client_id': cls.CLIENT_ID,
+			'scope': scope,
+			'redirect_uri': cls.REDIRECT_URI,
+			'access_type': 'offline',
+			'prompt': 'consent',
+		}
 
-        return requests.Request("GET", self.AUTH_URL, params=auth_params).prepare().url
-    
-    @classmethod
-    def get_tokens(self, code: str) -> ApiTokens:
-        
-        code = code
-        id_client = self.CLIENT_ID
-        secret_client = self.CLIENT_SECRET
-        grant_type = "authorization_code"
-        redirect_uri = self.REDIRECT_URI
+		url = requests.Request('GET', cls.AUTH_URL, params=auth_params).prepare().url
 
-        response = requests.post(self.TOKEN_URL, data={
-            "client_id": id_client,
-            "client_secret": secret_client,
-            "grant_type": grant_type,
-            "code": code,
-            "redirect_uri": redirect_uri
-        })
-        token_info = response.json()
-        print(f"Token response: {token_info}")
+		if not url:
+			raise Exception('Failed to construct Youtube login URL')
 
-        access_token = token_info["access_token"]
-        refresh_token = token_info["refresh_token"]
-        expires_in = token_info["expires_in"]
+		return url
 
-        return ApiTokens(access_token=access_token, refresh_token=refresh_token, expires_in=expires_in)
+	@classmethod
+	def get_tokens(cls, code: str) -> ApiTokens:
 
-    def __init__(self, access_token):
-        self.HEADERS = {
-            "Authorization": f"Bearer {access_token}"
-        }
-        
-    def get_current_user(self) -> ApiResponse[ApiUser]:
-        CURRENT_USER_URL = f'{self.API_BASE_URL}/channels?part=snippet&mine=true'
+		code = code
+		id_client = cls.CLIENT_ID
+		secret_client = cls.CLIENT_SECRET
+		grant_type = 'authorization_code'
+		redirect_uri = cls.REDIRECT_URI
 
-        current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
+		response = requests.post(
+			cls.TOKEN_URL,
+			data={
+				'client_id': id_client,
+				'client_secret': secret_client,
+				'grant_type': grant_type,
+				'code': code,
+				'redirect_uri': redirect_uri,
+			},
+		)
+		token_info = response.json()
+		print(f'Token response: {token_info}')
 
-        # Youtube API error
-        if current_user_response.status_code != 200:
-            return ApiResponse[ApiUser](
-                success=False,
-                message=data['error']['message'],
-                status_code=current_user_response.status_code,
-                data=None
-            )
+		access_token = token_info['access_token']
+		refresh_token = token_info['refresh_token']
+		expires_in = token_info['expires_in']
 
-        try:
-            data = current_user_response.json()
+		return ApiTokens(
+			access_token=access_token,
+			refresh_token=refresh_token,
+			expires_in=expires_in,
+		)
 
-            return ApiResponse[ApiUser](
-                success=True,
-                message="",
-                status_code=current_user_response.status_code,
-                data=ApiUser(name=data['items'][0]['snippet']['title'], user_id=data['items'][0]['id'])
-            )
+	def __init__(self, access_token):
+		self.HEADERS = {'Authorization': f'Bearer {access_token}'}
 
-        except:
-            return ApiResponse[list[ApiPlaylist]](
-                success=False,
-                message="Error parsing response JSON",
-                status_code=current_user_response.status_code,
-                data=current_user_response.text
-            )
+	def get_current_user(self) -> ApiSuccess[ApiUser] | ApiError:
+		CURRENT_USER_URL = f'{self.API_BASE_URL}/channels?part=snippet&mine=true'
 
+		current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
 
-    def search_song(self, query: str):
-        # TODO
-        pass
+		try:
+			data = current_user_response.json()
+		except Exception as e:
+			print(f'Error parsing Youtube current user response JSON: {e}')
+			return ApiError(
+				status_code=current_user_response.status_code,
+				message='Error parsing response JSON',
+			)
 
-    def _parse_playlist(self, apiPlaylist: dict) -> ApiPlaylist:
-        return ApiPlaylist(
-            playlist_id=apiPlaylist['id'],
-            title=apiPlaylist['snippet']['title'],
-            description=apiPlaylist['snippet']['description'],
-            author=apiPlaylist['snippet']['channelTitle'],
-            image_url=apiPlaylist['snippet']['thumbnails']['default']['url'] if apiPlaylist['snippet']['thumbnails'] and apiPlaylist['snippet']['thumbnails']['default'] else None,
-            songs=[]
-        )
+		# Youtube API error
+		if current_user_response.status_code != 200:
+			return ApiError(
+				status_code=current_user_response.status_code,
+				message=data.get('error', {}).get('message', 'Youtube API Error'),
+			)
 
-    def _parse_song(self, apiSong: dict) -> ApiSong:
-        return ApiSong(
-            song_id=apiSong['snippet']['resourceId']['videoId'],
-            title=apiSong['snippet']['title'],
-            artist=apiSong['snippet']['videoOwnerChannelTitle'],
-            image_url=apiSong['snippet']['thumbnails']['default']['url'] if apiSong['snippet']['thumbnails'] and apiSong['snippet']['thumbnails']['default'] else None,
-            release_date=apiSong['contentDetails']['videoPublishedAt'],
-            duration_ms=0,  # Too much work for too low utility
+		return ApiSuccess(
+			status_code=current_user_response.status_code,
+			data=ApiUser(
+				name=data['items'][0]['snippet']['title'],
+				user_id=data['items'][0]['id'],
+			),
+		)
 
-            id_in_playlist=apiSong['id']
-        )
-    
-    def get_all_playlists(self) -> ApiResponse[list[ApiPlaylist]]:
-        
-        response = requests.get(f"{self.API_BASE_URL}/playlists?mine=true&part=snippet,contentDetails&maxResults=50", headers=self.HEADERS)
-        result: list[ApiPlaylist] = []
-        # Invalid JSON error
-        try:
-            data = response.json()
-        except:
-            return ApiResponse[list[ApiPlaylist]](
-                success=False,
-                message="Error parsing response JSON",
-                status_code=response.status_code,
-                data=response.text
-            )
+	def search_song(self, query: str):
+		# TODO
+		pass
 
-        # Youtube API error
-        if response.status_code != 200:
-            return ApiResponse[list[ApiPlaylist]](
-                success=False,
-                message=data['error']['message'],
-                status_code=response.status_code,
-                data=[]
-            )
+	def _parse_playlist(self, apiPlaylist: dict) -> ApiPlaylist:
+		return ApiPlaylist(
+			playlist_id=apiPlaylist['id'],
+			title=apiPlaylist['snippet']['title'],
+			description=apiPlaylist['snippet']['description'],
+			author=apiPlaylist['snippet']['channelTitle'],
+			image_url=apiPlaylist['snippet']['thumbnails']['default']['url']
+			if apiPlaylist['snippet']['thumbnails']
+			and apiPlaylist['snippet']['thumbnails']['default']
+			else None,
+			songs=[],
+		)
 
-        # Happy case
+	def _parse_song(self, apiSong: dict) -> ApiSong:
+		return ApiSong(
+			song_id=apiSong['snippet']['resourceId']['videoId'],
+			title=apiSong['snippet']['title'],
+			artist=apiSong['snippet']['videoOwnerChannelTitle'],
+			image_url=apiSong['snippet']['thumbnails']['default']['url']
+			if apiSong['snippet']['thumbnails']
+			and apiSong['snippet']['thumbnails']['default']
+			else None,
+			release_date=apiSong['contentDetails']['videoPublishedAt'],
+			duration_ms=0,  # Too much work for too low utility
+			id_in_playlist=apiSong['id'],
+		)
 
-        for playlist in data['items']:
-            result.append(self._parse_playlist(playlist))
-        
-        return ApiResponse[list[ApiPlaylist]](
-            success=True,
-            message="",
-            status_code=response.status_code,
-            data=result
-        )
-    
-    def _get_playlist_info(self, playlist_id: str) -> ApiResponse:
-        response = requests.get(f"{self.API_BASE_URL}/playlists?part=snippet,contentDetails&maxResults=50&id={playlist_id}", headers=self.HEADERS)
+	def get_all_playlists(self) -> ApiSuccess[list[ApiPlaylist]] | ApiError:
 
-        # Invalid JSON error
-        try:
-            data = response.json()
-        except:
-            raise Exception("Error parsing response JSON")
+		response = requests.get(
+			f'{self.API_BASE_URL}/playlists?mine=true&part=snippet,contentDetails&maxResults=50',
+			headers=self.HEADERS,
+		)
+		result: list[ApiPlaylist] = []
+		# Invalid JSON error
+		try:
+			data = response.json()
+		except Exception as e:
+			print(f'Error parsing Youtube playlists response JSON: {e}')
+			return ApiError(
+				status_code=response.status_code,
+				message='Error parsing response JSON',
+			)
 
-        # Youtube API error
-        if response.status_code != 200:
-            raise Exception(data['error']['message'] if data['error'] and data['error']['message'] else "Youtube Api Error")
-        
-        return ApiResponse(
-            success=True,
-            message="",
-            status_code=response.status_code,
-            data=self._parse_playlist(data['items'][0])
-        )
+		# Youtube API error
+		if response.status_code != 200:
+			return ApiError(
+				status_code=response.status_code,
+				message=data['error']['message'],
+			)
 
-    def get_playlist(self, playlist_id: Any) -> ApiResponse[ApiPlaylist]:
-        song_page_url = f"{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}"
-        playlist_info = self._get_playlist_info(playlist_id)
-        result = playlist_info.data
+		# Happy case
+		for playlist in data['items']:
+			result.append(self._parse_playlist(playlist))
 
-        # Invalid JSON error
-        
-        songs: list[ApiSong] = []
-        next_page_token = ""
-        while True:
-            response = requests.get(song_page_url + next_page_token, headers=self.HEADERS)
-            try:
-                data = response.json()
-            except:
-                return ApiResponse[list[ApiPlaylist]](
-                    success=False,
-                    message="Error parsing response JSON",
-                    status_code=response.status_code,
-                    data=response.text
-                )
+		return ApiSuccess(status_code=response.status_code, data=result)
 
-            # Youtube API error
-            if response.status_code != 200:
-                return ApiResponse[list[ApiPlaylist]](
-                    success=False,
-                    message=data['error']['message'],
-                    status_code=response.status_code,
-                    data=[]
-                )
+	def _get_playlist_info(self, playlist_id: str) -> ApiSuccess[ApiPlaylist]:
+		response = requests.get(
+			f'{self.API_BASE_URL}/playlists?part=snippet,contentDetails&maxResults=50&id={playlist_id}',
+			headers=self.HEADERS,
+		)
 
-            # Happy case
-            for song in data['items']:
-                songs.append(self._parse_song(song))
+		# Invalid JSON error
+		try:
+			data = response.json()
+		except Exception as e:
+			print(f'Error parsing Youtube playlist info response JSON: {e}')
+			raise Exception('Error parsing response JSON')
 
-            if not data.get('nextPageToken'):
-                break
-            next_page_token = f"&pageToken={data['nextPageToken']}"
+		# Youtube API error
+		if response.status_code != 200:
+			raise Exception(
+				data['error']['message']
+				if data['error'] and data['error']['message']
+				else 'Youtube Api Error'
+			)
 
-        result.songs = songs
-        
-        return ApiResponse[list[ApiPlaylist]](
-            success=True,
-            message="",
-            status_code=response.status_code,
-            data=result
-        )
+		return ApiSuccess(
+			status_code=response.status_code,
+			data=self._parse_playlist(data['items'][0]),
+		)
 
-    def add_to_playlist(self, playlist_id: str, song_ids: list[str]) -> ApiResponse[None]:
-        for video_id in song_ids:
-            request_url = f"{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails"
-            
-            request_body = {
-                "snippet": {
-                    "playlistId": playlist_id,
-                    "resourceId": {
-                        "videoId": video_id,
-                        "kind": "youtube#video"
-                    }   
-                }    
-            }
+	def get_playlist(self, playlist_id: Any) -> ApiSuccess[ApiPlaylist] | ApiError:
+		song_page_url = f'{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}'
+		try:
+			playlist_info = self._get_playlist_info(playlist_id)
+		except Exception as ex:
+			return ApiError(status_code=0, message=str(ex))
+		result = playlist_info.data
 
-            response = requests.post(request_url, json=request_body, headers=self.HEADERS)
-            
-            try:
-                data = response.json()
-            except:
-                return ApiResponse[None](
-                    success=False,
-                    message="Error parsing response JSON",
-                    status_code=response.status_code,
-                    data=None
-                )
+		songs: list[ApiSong] = []
+		next_page_token = ''
+		while True:
+			response = requests.get(
+				song_page_url + next_page_token, headers=self.HEADERS
+			)
+			try:
+				data = response.json()
+			except Exception as e:
+				print(f'Error parsing Youtube playlist songs response JSON: {e}')
+				return ApiError(
+					status_code=response.status_code,
+					message='Error parsing response JSON',
+				)
 
-            # Youtube API error
-            if response.status_code != 200:
-                return ApiResponse[None](
-                    success=False,
-                    message=response.text,
-                    status_code=response.status_code,
-                    data=None
-                )
-        
-        return ApiResponse(
-            success=True,
-            message="Successfully added songs to playlist",
-            status_code=response.status_code,
-            data=None
-        )
-    
+			# Youtube API error
+			if response.status_code != 200:
+				return ApiError(
+					status_code=response.status_code,
+					message=data['error']['message'],
+				)
 
-    def remove_from_playlist(self, playlist_id: str, song_ids: list[str]) -> ApiResponse[None]:
-        for video_id in song_ids:
-            request_url = f"{self.API_BASE_URL}/playlistItems?id={video_id}"
+			# Happy case
+			for song in data['items']:
+				songs.append(self._parse_song(song))
 
-            response = requests.delete(request_url, headers=self.HEADERS)
-            
-            try:
-                data = response.json()
-            except:
-                return ApiResponse[None](
-                    success=False,
-                    message="Error parsing response JSON",
-                    status_code=response.status_code,
-                    data=None
-                )
+			if not data.get('nextPageToken'):
+				break
+			next_page_token = f'&pageToken={data["nextPageToken"]}'
 
-            # Youtube API error
-            if response.status_code != 204:
-                return ApiResponse[None](
-                    success=False,
-                    message=data['error']['message'],
-                    status_code=response.status_code,
-                    data=None
-                )
+		result.songs = songs
 
-        # Happy case
-        return ApiResponse[None](
-            success=True,
-            message="Successfully removed songs from playlist",
-            status_code=204,
-            data=None
-        )
-    
-    def create_playlist(self, playlist: ApiPlaylist) -> ApiResponse[ApiPlaylist]:
-        PRIVACY_STATUS = "private"
-        response = requests.post(f"{self.API_BASE_URL}/playlists?part=snippet,status", headers=self.HEADERS, json={
-            "snippet": {
-                "title": playlist.title,
-                "description": playlist.description
-            },
-            "status": {
-                "privacyStatus": PRIVACY_STATUS
-            }
-        })
-        # Invalid JSON error
-        try:
-            data = response.json()
-        except:
-            return ApiResponse[list[ApiPlaylist]](
-                success=False,
-                message="Error parsing response JSON",
-                status_code=response.status_code,
-                data=response.text
-            )
+		return ApiSuccess(status_code=response.status_code, data=result)
 
-        # Youtube API error
-        if response.status_code != 200:
-            return ApiResponse[list[ApiPlaylist]](
-                success=False,
-                message=data['error']['message'],
-                status_code=response.status_code,
-                data=[]
-            )
-        
-        playlist.author = data['snippet']['channelTitle']
-        playlist.id = data['id']
-        playlist.songs = []
+	def add_to_playlist(
+		self, playlist_id: str, song_ids: list[str]
+	) -> ApiSuccess[None] | ApiError:
+		for video_id in song_ids:
+			request_url = (
+				f'{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails'
+			)
 
-        # Happy case
-        return ApiResponse[ApiPlaylist](
-            success=True,
-            message="Successfully created playlist",
-            status_code=response.status_code,
-            data=playlist
-        )
+			request_body = {
+				'snippet': {
+					'playlistId': playlist_id,
+					'resourceId': {'videoId': video_id, 'kind': 'youtube#video'},
+				}
+			}
 
+			response = requests.post(
+				request_url, json=request_body, headers=self.HEADERS
+			)
+
+			try:
+				_ = response.json()
+			except Exception as e:
+				print(f'Error parsing Youtube add to playlist response JSON: {e}')
+				return ApiError(
+					status_code=response.status_code,
+					message='Error parsing response JSON',
+				)
+
+			# Youtube API error
+			if response.status_code != 200:
+				return ApiError(
+					status_code=response.status_code,
+					message=response.text,
+				)
+
+		return ApiSuccess(
+			status_code=201,
+			data=None,
+			message='Successfully added songs to playlist',
+		)
+
+	def remove_from_playlist(
+		self, playlist_id: str, song_ids: list[str]
+	) -> ApiSuccess[None] | ApiError:
+		for video_id in song_ids:
+			request_url = f'{self.API_BASE_URL}/playlistItems?id={video_id}'
+
+			response = requests.delete(request_url, headers=self.HEADERS)
+
+			try:
+				data = response.json()
+			except Exception as e:
+				print(f'Error parsing Youtube remove from playlist response JSON: {e}')
+				return ApiError(
+					status_code=response.status_code,
+					message='Error parsing response JSON',
+				)
+
+			# Youtube API error
+			if response.status_code != 204:
+				return ApiError(
+					status_code=response.status_code,
+					message=data['error']['message'],
+				)
+
+		# Happy case
+		return ApiSuccess(
+			status_code=204,
+			data=None,
+			message='Successfully removed songs from playlist',
+		)
+
+	def create_playlist(
+		self, playlist: ApiPlaylist
+	) -> ApiSuccess[ApiPlaylist] | ApiError:
+		PRIVACY_STATUS = 'private'
+		response = requests.post(
+			f'{self.API_BASE_URL}/playlists?part=snippet,status',
+			headers=self.HEADERS,
+			json={
+				'snippet': {
+					'title': playlist.title,
+					'description': playlist.description,
+				},
+				'status': {'privacyStatus': PRIVACY_STATUS},
+			},
+		)
+		# Invalid JSON error
+		try:
+			data = response.json()
+		except Exception as e:
+			print(f'Error parsing Youtube create playlist response JSON: {e}')
+			return ApiError(
+				status_code=response.status_code,
+				message='Error parsing response JSON',
+			)
+
+		# Youtube API error
+		if response.status_code != 200:
+			return ApiError(
+				status_code=response.status_code,
+				message=data['error']['message'],
+			)
+
+		playlist.author = data['snippet']['channelTitle']
+		playlist.id = data['id']
+		playlist.songs = []
+
+		# Happy case
+		return ApiSuccess(
+			status_code=response.status_code,
+			data=playlist,
+			message='Successfully created playlist',
+		)

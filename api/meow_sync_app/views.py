@@ -18,12 +18,17 @@ from drf_spectacular.utils import (
 from rest_framework import status, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.authentication import BasicAuthentication
+from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
-from .music_providers_api.ApiInterface import *
-from .music_providers_api.SpotifyApi import *
-from .music_providers_api.YoutubeApi import *
+from .music_providers_api.ApiInterface import (
+	ApiInterface,
+	ApiSuccess,
+	ApiError,
+	ApiUser,
+)
+from .music_providers_api.SpotifyApi import SpotifyApi
+from .music_providers_api.YoutubeApi import YoutubeApi
 from django.contrib.auth.models import User
 
 
@@ -57,7 +62,7 @@ def random_str_alphanum(length: int) -> str:
 	return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 
-def get_api_interface_class_for_provider(provider: str) -> ApiInterface | None:
+def get_api_interface_class_for_provider(provider: str) -> type[ApiInterface] | None:
 	PROVIDER_CLASS_MAP = {
 		'spotify': SpotifyApi,
 		'youtube': YoutubeApi,
@@ -65,7 +70,8 @@ def get_api_interface_class_for_provider(provider: str) -> ApiInterface | None:
 
 	try:
 		return PROVIDER_CLASS_MAP[provider]
-	except:
+	except Exception as e:
+		print(f'Error getting API interface class for provider {provider}: {e}')
 		return None
 
 
@@ -82,6 +88,8 @@ def get_api_interface_class_for_provider(provider: str) -> ApiInterface | None:
 	)
 )
 class OAuthLoginView(APIView):
+	authentication_classes = [TokenAuthentication, BasicAuthentication]
+
 	def get(self, request, provider: str) -> Response:
 		if provider not in MUSIC_PROVIDERS.keys():
 			raise serializers.ValidationError(
@@ -96,6 +104,12 @@ class OAuthLoginView(APIView):
 		oauth_state.save()
 
 		provider_api_class = get_api_interface_class_for_provider(oauth_state.provider)
+
+		if not provider_api_class:
+			return Response(
+				{'message': f'Provider {provider} is not supported.'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
 
 		return Response(
 			{
@@ -134,12 +148,18 @@ class OAuthCallbackView(APIView):
 			provider_api_class = get_api_interface_class_for_provider(
 				oauth_state.provider
 			)
-			provider_tokens: ApiTokens = provider_api_class.get_tokens(code=code)
+			if not provider_api_class:
+				return Response(
+					{'message': f'Provider {provider} is not supported.'},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+
+			provider_tokens = provider_api_class.get_tokens(code=code)
 
 			provider_api_instance = provider_api_class(
 				access_token=provider_tokens.access_token
 			)
-			provider_user_response: ApiResponse[ApiUser] = (
+			provider_user_response: ApiSuccess[ApiUser] | ApiError = (
 				provider_api_instance.get_current_user()
 			)
 
@@ -265,6 +285,7 @@ class OAuthCallbackView(APIView):
 	)
 )
 class OAuthDisconnectView(APIView):
+	authentication_classes = [TokenAuthentication, BasicAuthentication]
 	permission_classes = [IsAuthenticated]
 
 	def delete(self, request, provider: str):
@@ -275,7 +296,10 @@ class OAuthDisconnectView(APIView):
 
 		current_user = request.user
 		try:
-			OAuthConnection.objects.get(user=current_user, provider=provider)
+			connection = OAuthConnection.objects.get(
+				user=current_user, provider=provider
+			)
+			connection.delete()
 		except OAuthConnection.DoesNotExist:
 			print(f'OAuthConnection does not exist for provider: {provider}')
 			return Response(
