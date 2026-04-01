@@ -22,6 +22,7 @@ class SpotifyApi(ApiInterface):
 	AUTH_URL = 'https://accounts.spotify.com/authorize'
 	TOKEN_URL = 'https://accounts.spotify.com/api/token'
 	API_BASE_URL = 'https://api.spotify.com/v1'
+	SEARCH_QUERY_MARKET = 'CH'
 
 	@classmethod
 	def login_url(cls, state: str) -> str:
@@ -363,6 +364,66 @@ class SpotifyApi(ApiInterface):
 			message='Successfully created playlist',
 		)
 
-	def search_song(self, query: str):
-		# 
-		pass
+	def _song_query_string(self, artist_name: str, song_title: str) -> str:
+		return f"artist:{artist_name} track:{song_title}"
+
+	def search_song(self, query: ApiSearchQuery) -> ApiSuccess[list[ApiSong]] | ApiError:
+		request_url = f'{self.API_BASE_URL}/search'
+		request_params = {
+			'q': self._song_query_string(
+				artist_name=query.artist_name,
+				song_title=query.song_title,
+			),
+			'type': 'track',
+			'market': SEARCH_QUERY_MARKET,
+			'offset': 0,
+			'limit': 10,
+		}
+
+		response = response = requests.get(request_url, params=request_params, headers=self.HEADERS)
+
+		try:
+			data = response.json()
+		except Exception as e:
+			print(f'Error parsing Spotify search query response JSON: {e}')
+			return ApiError(
+				status_code=response.status_code,
+				message='Failed to parse JSON',
+			)
+
+		# Spotify API error
+		if response.status_code != 201:
+			return ApiError(
+				status_code=response.status_code,
+				message='Spotify API Error',
+			)
+		
+		result: list[ApiSong] = []
+
+		try:
+			tracks = data['tracks']['items']
+			for track in tracks:
+				result.append(ApiSong(
+					song_id=track['id'],
+					artist=', '.join(
+							artist['name'] for artist in track['artists']
+						),
+					title=track['name'],
+					duration_ms=track['duration_ms'],
+					image_url=track['album']['images'][0]['url']
+					if track['album']['images']
+					and track['album']['images'][0]
+					else None,
+					release_date=['album']['release_date'],
+				))
+		except Exception as e:
+			return ApiError(
+				status_code=500,
+				message='Error parsing song list. Exception: {e}',
+			)
+		return ApiSuccess(
+			status_code=200,
+			data=result,
+			message="Successfully retrieved songs"
+		)
+		
