@@ -2,10 +2,9 @@ from django.db import models  # noqa: F401
 from django.conf import settings
 
 
-MUSIC_PROVIDERS = {
-	'spotify': 'Spotify',
-	'youtube': 'Youtube',
-}
+class MusicProvider(models.TextChoices):
+	SPOTIFY = 'spotify', 'Spotify'
+	YOUTUBE = 'youtube', 'Youtube'
 
 
 class AbstractBaseModel(models.Model):
@@ -20,28 +19,31 @@ class AbstractBaseModel(models.Model):
 class OAuthConnection(AbstractBaseModel):
 	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
-	provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
+	provider_user_id = models.CharField(max_length=255)
+	provider = models.CharField(max_length=255, choices=MusicProvider.choices)
 	access_token = models.CharField(max_length=255)
-	refresh_token = models.CharField(max_length=255, blank=True, null=True)
-	token_expires_at = models.DateTimeField(blank=True, null=True)
-	extra_data = models.JSONField()
+	refresh_token = models.CharField(max_length=255)
+	token_expires_at = models.DateTimeField()
+	extra_data = models.JSONField(null=True)
 
 
 class OAuthState(AbstractBaseModel):
 	"Used to keep track of user on OAuth callback."
 
-	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+	user = models.ForeignKey(
+		settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True
+	)
 	state = models.CharField(max_length=255, unique=True)
-	provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
+	provider = models.CharField(max_length=255, choices=MusicProvider.choices)
 
 
 class PlaylistSynchronization(AbstractBaseModel):
 	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 	first_playlist_id = models.CharField(max_length=255)
-	first_provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
+	first_provider = models.CharField(max_length=255, choices=MusicProvider.choices)
 	second_playlist_id = models.CharField(max_length=255)
-	second_provider = models.CharField(max_length=255, choices=MUSIC_PROVIDERS)
+	second_provider = models.CharField(max_length=255, choices=MusicProvider.choices)
 
 	commenters = models.ManyToManyField(
 		settings.AUTH_USER_MODEL,
@@ -62,7 +64,7 @@ class SongIdTranslation(AbstractBaseModel):
 	spotify_id = models.CharField(max_length=255, blank=True, null=True)
 	youtube_id = models.CharField(max_length=255, blank=True, null=True)
 
-	class Meta:
+	class Meta(AbstractBaseModel.Meta):
 		unique_together = [
 			('user', 'youtube_id'),
 			('user', 'spotify_id'),
@@ -82,5 +84,5 @@ class Comment(AbstractBaseModel):
 	)
 	comment = models.TextField()
 
-	class Meta:
+	class Meta(AbstractBaseModel.Meta):
 		ordering = ['-created_at']

@@ -1,30 +1,36 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
+
+const route = useRoute();
+const { handleOAuthCallback } = useAuth();
 
 const errorText = ref("");
-const route = useRoute();
-const router = useRouter();
+const loading = ref(true);
 
-const token = route.query.token as string;
+onMounted(async () => {
+	const code = route.query.code as string | undefined;
+	const state = route.query.state as string | undefined;
 
-if (!token) {
-  errorText.value = "No token provided";
-} else {
-  localStorage.setItem("token", token);
-  setTimeout(() => {
-    router.push("/");
-  }, 2000);
-}
+	if (!code || !state) {
+		errorText.value = "Missing code or state in callback URL";
+		loading.value = false;
+		return;
+	}
+
+	await handleOAuthCallback(code, state);
+	loading.value = false;
+});
 </script>
 
 <template>
-  <div v-if="errorText">
-    <p class="text-red-500">{{ errorText }}</p>
-  </div>
-  <div v-else>
-    <p class="text-green-500">
-      Login successful! You will be redirected shortly.
-    </p>
-  </div>
+	<div class="flex flex-col items-center justify-center text-center">
+		<div v-if="loading">
+			<p class="text-gray-500">Completing login...</p>
+		</div>
+		<div v-else-if="errorText">
+			<p class="text-red-500">{{ errorText }}</p>
+		</div>
+	</div>
 </template>
