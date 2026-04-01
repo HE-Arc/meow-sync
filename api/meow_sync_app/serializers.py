@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Comment, MusicProvider
+from django.contrib.auth.models import User
+from .models import Comment, MusicProvider, OAuthConnection
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -21,3 +22,21 @@ class OAuthCallbackSuccessSerializer(serializers.Serializer):
 
 class OAuthMessageSerializer(serializers.Serializer):
 	message = serializers.CharField()
+
+
+class OAuthConnectionSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = OAuthConnection
+		fields = ['provider', 'provider_user_id']
+		read_only_fields = fields
+
+
+class MeSerializer(serializers.ModelSerializer):
+	connections = OAuthConnectionSerializer(
+		many=True, read_only=True, source='oauthconnection_set'
+	)
+
+	class Meta:
+		model = User
+		fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined', 'connections']
+		read_only_fields = fields

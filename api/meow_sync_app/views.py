@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from .models import Comment, OAuthState, OAuthConnection, MusicProvider
 from .serializers import (
 	CommentSerializer,
+	MeSerializer,
 	OAuthCallbackSuccessSerializer,
 	OAuthLoginResponseSerializer,
 	OAuthMessageSerializer,
@@ -37,7 +38,7 @@ PROVIDER_PARAMETER = OpenApiParameter(
 	type=str,
 	location=OpenApiParameter.PATH,
 	required=True,
-	enum=list(MusicProvider.values),
+	enum=[m.value for m in MusicProvider],
 	description='Music provider identifier.',
 )
 
@@ -305,7 +306,6 @@ class OAuthCallbackView(APIView):
 	)
 )
 class OAuthDisconnectView(APIView):
-	authentication_classes = [TokenAuthentication, BasicAuthentication]
 	permission_classes = [IsAuthenticated]
 
 	def delete(self, request, provider: str):
@@ -320,6 +320,12 @@ class OAuthDisconnectView(APIView):
 				user=current_user, provider=provider
 			)
 			connection.delete()
+			return Response(
+				{
+					'message': f'Successfully disconnected from {MusicProvider(provider).label}.'
+				},
+				status=status.HTTP_200_OK,
+			)
 		except OAuthConnection.DoesNotExist:
 			print(f'OAuthConnection does not exist for provider: {provider}')
 			return Response(
@@ -337,6 +343,19 @@ class OAuthDisconnectView(APIView):
 				},
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
 			)
+
+
+@extend_schema(
+	tags=['users'],
+	summary='Get current user',
+	responses={200: MeSerializer},
+)
+class MeView(APIView):
+	authentication_classes = [TokenAuthentication, BasicAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request) -> Response:
+		return Response(MeSerializer(request.user).data)
 
 
 class CommentViewSet(rest_framework.viewsets.ModelViewSet):

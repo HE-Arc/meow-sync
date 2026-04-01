@@ -23,6 +23,7 @@ from meow_sync_app.views import (
 	OAuthDisconnectView,
 	OAuthLoginView,
 	CommentViewSet,
+	MeView,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -51,5 +52,6 @@ urlpatterns = [
 		OAuthDisconnectView.as_view(),
 		name='oauth-disconnect',
 	),
+	path('api/users/me/', MeView.as_view(), name='users-me'),
 	path('api/', include(router.urls)),
 ]
