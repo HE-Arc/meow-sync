@@ -1,5 +1,6 @@
 import random
 import string
+import json
 import rest_framework.viewsets
 from datetime import datetime, timedelta
 
@@ -35,6 +36,7 @@ from rest_framework.views import APIView
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from .music_providers_api.ApiInterface import (
 	ApiInterface,
 	ApiSuccess,
@@ -392,7 +394,7 @@ class MeView(APIView):
 
 
 @extend_schema(
-	tags=['search'],
+	tags=['provider'],
 	summary='Search provider for Song',
 	description='Search for songs on provider. Returns a list of songs matching the query.',
 	parameters=[PROVIDER_PARAMETER, ARTIST_PARAMETER, MUSICNAME_PARAMETER],
@@ -457,7 +459,6 @@ class SearchView(APIView):
 		)
 		return Response(serializer.data, status=search_result.status_code)
 
-
 @extend_schema(
 	tags=['provider'],
 	summary='Provider playlists',
@@ -505,6 +506,77 @@ class ProviderPlaylistView(APIView):
 
 		return Response(serializer.data, status=status.HTTP_200_OK)
 
+	# first_playlist_id = models.CharField(max_length=255)
+	# first_provider = models.CharField(max_length=255, choices=MusicProvider.choices)
+	# second_playlist_id = models.CharField(max_length=255)
+	# second_provider = models.CharField(max_length=255, choices=MusicProvider.choices)
+class SyncPlaylist(APIView):
+	permission_classes = [IsAuthenticated]
+
+	@api_view(['POST'])
+	def post(self, request, playlist_sync_id: int):
+		current_user = request.user
+
+		try:
+			playlist_sync: PlaylistSynchronization = PlaylistSynchronization.objects.get(id=playlist_sync_id, user=current_user)
+		except PlaylistSynchronization.DoesNotExist:
+			return Response(
+				{'message': f'No playlist synchronization found with id {playlist_sync_id} for current user.'},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		try:
+			connection_1 = OAuthConnection.objects.get(user=current_user, provider=playlist_sync.first_provider)
+			connection_2 = OAuthConnection.objects.get(user=current_user, provider=playlist_sync.second_provider)
+		except OAuthConnection.DoesNotExist:
+			return Response(
+				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				status=status.HTTP_401_UNAUTHORIZED,
+			)
+		
+		provider_class_1 = get_api_interface_class_for_provider(playlist_sync.first_provider)
+		provider_class_2 = get_api_interface_class_for_provider(playlist_sync.second_provider)
+		provider_class_instance_1: ApiInterface = provider_class_1(access_token=connection_1.access_token)
+		provider_class_instance_2: ApiInterface = provider_class_2(access_token=connection_2.access_token)
+
+		# get songs for first provider 
+		playlist_response = provider_class_instance_1.get_playlist(playlist_sync.first_playlist_id)
+		if not playlist_response.success:
+			return Response(
+				{'message': f'Failed to fetch songs for provider {provider} and playlist {playlist_sync.first_playlist_id}. {playlist_response.message}'},
+				status=playlist_response.status_code,
+			)
+		songs_original = playlist_response.data.songs
+
+		# translate songs
+		songs_translated = []
+		error_bag = []
+		for song_o in songs_original:
+			search_response = provider_class_instance_2.search_song(ApiSearchQuery(artist_name=song_o.artist, song_title=song_o.title))
+			if not search_response.success:
+				error_bag.append(f"[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] {search_response.message}")
+				continue
+			search_results = search_response.data
+			if len(search_results) == 0:
+				error_bag.append(f"[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] No corresponding song found.")
+				continue
+			
+			songs_translated.append(search_results[0])
+		
+		translated_ids = [s.id for s in songs_translated]
+		provider_class_instance_2.add_to_playlist(playlist_sync.second_playlist_id, translated_ids)
+		# TODO: swagger and testing
+		
+		if len(error_bag) > 0:
+			return Response(
+				{'message': f'Failed to sync some songs: ' + ',\n'.join(error_bag)},
+				status=status.HTTP_206_PARTIAL_CONTENT,
+			)
+
+		return Response(
+			{'message': f'Successfully synced playlists.'},
+			status=status.HTTP_200_OK,
+		)
 
 class CommentViewSet(rest_framework.viewsets.ModelViewSet):
 	queryset = Comment.objects.all()
@@ -534,3 +606,4 @@ class SongIdTranslationViewSet(rest_framework.viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		serializer.save(user=self.request.user)
+		

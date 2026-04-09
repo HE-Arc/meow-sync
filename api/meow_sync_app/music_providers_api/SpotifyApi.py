@@ -367,13 +367,13 @@ class SpotifyApi(ApiInterface):
 	def _song_query_string(self, artist_name: str, song_title: str) -> str:
 		return f"track:{song_title} artist:{artist_name}"
 
-	def search_song(self, query: ApiSearchQuery) -> ApiSuccess[list[ApiSong]] | ApiError:
+	def search_song(self, query: ApiSearchQuery, retry=True, exact=True) -> ApiSuccess[list[ApiSong]] | ApiError:
 		request_url = f'{self.API_BASE_URL}/search'
 		request_params = {
 			'q': self._song_query_string(
 				artist_name=query.artist_name,
 				song_title=query.song_title,
-			),
+			) if exact else f"{query.artist_name} {query.song_title}".strip(),
 			'type': 'track',
 			'market': self.SEARCH_QUERY_MARKET,
 			'offset': 0,
@@ -422,6 +422,14 @@ class SpotifyApi(ApiInterface):
 				status_code=500,
 				message=f'Error parsing song list. Exception: {e}',
 			)
+		
+		if len(result) == 0 and retry:
+			if exact:
+				return self.search_song(query=query, retry=True, exact=False)
+			if not exact:
+				return self.search_song(query=ApiSearchQuery(artist_name="", song_title=query.song_title), retry=False, exact=False)
+		
+
 		return ApiSuccess(
 			status_code=200,
 			data=result,
