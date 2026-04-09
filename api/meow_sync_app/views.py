@@ -2,6 +2,8 @@ import random
 import string
 import rest_framework.viewsets
 from datetime import datetime, timedelta
+
+from .permissions import IsCommentAuthorOrReadOnly
 from .models import Comment, OAuthState, OAuthConnection, MusicProvider
 from .serializers import (
 	CommentSerializer,
@@ -359,5 +361,10 @@ class MeView(APIView):
 
 
 class CommentViewSet(rest_framework.viewsets.ModelViewSet):
-	queryset = Comment.objects.all()
-	serializer_class = CommentSerializer
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    authentication_classes = [TokenAuthentication, BasicAuthentication]  
+    permission_classes = [IsAuthenticated, IsCommentAuthorOrReadOnly]
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
