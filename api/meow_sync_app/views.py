@@ -10,6 +10,7 @@ from .models import (
 	OAuthConnection,
 	MusicProvider,
 	PlaylistSynchronization,
+	SongIdTranslation,
 )
 from .serializers import (
 	CommentSerializer,
@@ -18,6 +19,7 @@ from .serializers import (
 	OAuthCallbackSuccessSerializer,
 	OAuthLoginResponseSerializer,
 	OAuthMessageSerializer,
+	SongIdTranslationSerializer,
 )
 from drf_spectacular.utils import (
 	OpenApiParameter,
@@ -380,6 +382,16 @@ class CommentViewSet(rest_framework.viewsets.ModelViewSet):
 class PlaylistSynchronizationViewSet(rest_framework.viewsets.ModelViewSet):
 	queryset = PlaylistSynchronization.objects.all()
 	serializer_class = PlaylistSynchronizationSerializer
+	authentication_classes = [TokenAuthentication, BasicAuthentication]
+	permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user)
+
+
+class SongIdTranslationViewSet(rest_framework.viewsets.ModelViewSet):
+	queryset = SongIdTranslation.objects.all()
+	serializer_class = SongIdTranslationSerializer
 	authentication_classes = [TokenAuthentication, BasicAuthentication]
 	permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 
