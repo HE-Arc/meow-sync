@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Comment, MusicProvider, OAuthConnection
+from .models import Comment, MusicProvider, OAuthConnection, PlaylistSynchronization
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -9,6 +9,31 @@ class CommentSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Comment
 		fields = ['id', 'comment', 'user', 'playlist_sync', 'created_at', 'updated_at']
+		read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+
+class PlaylistSynchronizationSerializer(serializers.ModelSerializer):
+	user = serializers.StringRelatedField(read_only=True)
+	first_provider = serializers.ChoiceField(choices=MusicProvider.choices)
+	second_provider = serializers.ChoiceField(choices=MusicProvider.choices)
+
+	def validate(self, data):
+		if data['first_provider'] == data['second_provider']:
+			raise serializers.ValidationError('Providers must be different')
+		return data
+
+	class Meta:
+		model = PlaylistSynchronization
+		fields = [
+			'id',
+			'user',
+			'first_playlist_id',
+			'first_provider',
+			'second_playlist_id',
+			'second_provider',
+			'created_at',
+			'updated_at',
+		]
 		read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 
