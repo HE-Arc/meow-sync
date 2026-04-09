@@ -4,12 +4,12 @@ from .models import Comment, MusicProvider, OAuthConnection
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField(read_only=True)
-    
-    class Meta:
-        model = Comment
-        fields = ['id', 'comment', 'user', 'playlist_sync', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+	user = serializers.StringRelatedField(read_only=True)
+
+	class Meta:
+		model = Comment
+		fields = ['id', 'comment', 'user', 'playlist_sync', 'created_at', 'updated_at']
+		read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 
 class OAuthLoginResponseSerializer(serializers.Serializer):

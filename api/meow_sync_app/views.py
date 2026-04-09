@@ -361,10 +361,10 @@ class MeView(APIView):
 
 
 class CommentViewSet(rest_framework.viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-    authentication_classes = [TokenAuthentication, BasicAuthentication]  
-    permission_classes = [IsAuthenticated, IsCommentAuthorOrReadOnly]
-    
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+	queryset = Comment.objects.all()
+	serializer_class = CommentSerializer
+	authentication_classes = [TokenAuthentication, BasicAuthentication]
+	permission_classes = [IsAuthenticated, IsCommentAuthorOrReadOnly]
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user)
