@@ -25,6 +25,7 @@ from meow_sync_app.views import (
 	CommentViewSet,
 	MeView,
 	PlaylistSynchronizationViewSet,
+	SearchView,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -55,5 +56,6 @@ urlpatterns = [
 		name='oauth-disconnect',
 	),
 	path('api/users/me/', MeView.as_view(), name='users-me'),
+	path('api/<str:provider>/search/', SearchView.as_view(), name='provider-search'),
 	path('api/', include(router.urls)),
 ]

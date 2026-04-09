@@ -18,6 +18,7 @@ from .serializers import (
 	OAuthCallbackSuccessSerializer,
 	OAuthLoginResponseSerializer,
 	OAuthMessageSerializer,
+	SearchResponseSerializer,
 )
 from drf_spectacular.utils import (
 	OpenApiParameter,
@@ -36,6 +37,7 @@ from .music_providers_api.ApiInterface import (
 	ApiSuccess,
 	ApiError,
 	ApiUser,
+	ApiSearchQuery,
 )
 from .music_providers_api.SpotifyApi import SpotifyApi
 from .music_providers_api.YoutubeApi import YoutubeApi
@@ -65,6 +67,22 @@ STATE_PARAMETER = OpenApiParameter(
 	location=OpenApiParameter.QUERY,
 	required=True,
 	description='Opaque OAuth state value created by the login endpoint.',
+)
+
+ARTIST_PARAMETER = OpenApiParameter(
+	name='artistName',
+	type=str,
+	location=OpenApiParameter.QUERY,
+	required=True,
+	description='Search artist name for YouTube videos.',
+)
+
+MUSICNAME_PARAMETER = OpenApiParameter(
+	name='musicName',
+	type=str,
+	location=OpenApiParameter.QUERY,
+	required=True,
+	description='Search music name for YouTube videos.',
 )
 
 
@@ -365,6 +383,61 @@ class MeView(APIView):
 
 	def get(self, request) -> Response:
 		return Response(MeSerializer(request.user).data)
+
+@extend_schema(
+	tags=['search'],
+	summary='Search provider for Song',
+	description='Search for songs on provider. Returns a list of songs matching the query.',
+	parameters=[PROVIDER_PARAMETER, ARTIST_PARAMETER, MUSICNAME_PARAMETER],
+	responses={
+		200: SearchResponseSerializer,
+		400: OAuthMessageSerializer,
+		401: OAuthMessageSerializer,
+	},
+)
+class SearchView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request, provider: str) -> Response:
+		"""Search provider for songs"""
+		artist_name = request.GET.get('artistName')
+		song_title = request.GET.get('musicName')
+
+		if not artist_name or not song_title:
+			return Response(
+				{'message': 'Search query parameters "artistName" and "musicName" are required'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		if not provider :
+			return Response(
+				{'message': 'Search query parameter "provider" is required'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		
+		current_user = request.user
+		try:
+			connection = OAuthConnection.objects.get(user=current_user, provider=provider)
+		except OAuthConnection.DoesNotExist:
+			return Response(
+				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				status=status.HTTP_401_UNAUTHORIZED,
+			)
+
+		provider_class = get_api_interface_class_for_provider(provider)
+		provider_class_instance = provider_class(access_token=connection.access_token)
+
+		search_result = provider_class_instance.search_song(
+			ApiSearchQuery(artist_name=artist_name, song_title=song_title)
+		)
+
+		serializer = SearchResponseSerializer(
+			{
+				'data': search_result.data,
+				'message': search_result.message,
+			}
+		)
+		return Response(serializer.data, status=search_result.status_code)
 
 
 class CommentViewSet(rest_framework.viewsets.ModelViewSet):
