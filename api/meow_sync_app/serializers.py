@@ -14,8 +14,8 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class PlaylistSynchronizationSerializer(serializers.ModelSerializer):
 	user = serializers.StringRelatedField(read_only=True)
-	first_provider = serializers.ChoiceField(choices=MusicProvider.choices)
-	second_provider = serializers.ChoiceField(choices=MusicProvider.choices)
+	first_provider = serializers.ChoiceField(choices=MusicProvider.values)
+	second_provider = serializers.ChoiceField(choices=MusicProvider.values)
 
 	def validate(self, data):
 		if data['first_provider'] == data['second_provider']:
