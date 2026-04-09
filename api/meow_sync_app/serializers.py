@@ -1,6 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Comment, MusicProvider, OAuthConnection, PlaylistSynchronization
+from .models import (
+	Comment,
+	MusicProvider,
+	OAuthConnection,
+	PlaylistSynchronization,
+	SongIdTranslation,
+)
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -31,6 +37,22 @@ class PlaylistSynchronizationSerializer(serializers.ModelSerializer):
 			'first_provider',
 			'second_playlist_id',
 			'second_provider',
+			'created_at',
+			'updated_at',
+		]
+		read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+
+class SongIdTranslationSerializer(serializers.ModelSerializer):
+	user = serializers.StringRelatedField(read_only=True)
+
+	class Meta:
+		model = SongIdTranslation
+		fields = [
+			'id',
+			'user',
+			'spotify_id',
+			'youtube_id',
 			'created_at',
 			'updated_at',
 		]
