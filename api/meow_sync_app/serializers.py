@@ -116,3 +116,16 @@ class ApiSongSerializer(serializers.Serializer):
 class SearchResponseSerializer(serializers.Serializer):
 	data = ApiSongSerializer(many=True)
 	message = serializers.CharField()
+
+class ApiPlaylistSerializer(serializers.Serializer):
+	id = serializers.CharField(help_text='playlist ID')
+	title = serializers.CharField(help_text='playlist title')
+	description = serializers.CharField(help_text='playlist description')
+	author = serializers.CharField(help_text='playlist author')
+	image_url = serializers.URLField(allow_null=True, help_text='Image URL')
+	songs = ApiSongSerializer(many=True)
+
+
+class ProviderPlaylistsResponseSerializer(serializers.Serializer):
+	data = ApiPlaylistSerializer(many=True)
+	message = serializers.CharField()

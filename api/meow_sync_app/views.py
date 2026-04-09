@@ -21,6 +21,7 @@ from .serializers import (
 	OAuthLoginResponseSerializer,
 	OAuthMessageSerializer,
 	SearchResponseSerializer,
+	ProviderPlaylistsResponseSerializer,
 )
 from drf_spectacular.utils import (
 	OpenApiParameter,
@@ -406,6 +407,11 @@ class SearchView(APIView):
 
 	def get(self, request, provider: str) -> Response:
 		"""Search provider for songs"""
+		if provider not in MusicProvider.values:
+			raise serializers.ValidationError(
+				f'This field must be an valid provider. providers: {" ".join(MusicProvider.values)}'
+			)
+
 		artist_name = request.GET.get('artistName')
 		song_title = request.GET.get('musicName')
 
@@ -450,6 +456,54 @@ class SearchView(APIView):
 			}
 		)
 		return Response(serializer.data, status=search_result.status_code)
+
+
+@extend_schema(
+	tags=['provider'],
+	summary='Provider playlists',
+	description='Interact with provider playlists',
+	parameters=[PROVIDER_PARAMETER],
+	responses={
+		200: ProviderPlaylistsResponseSerializer,
+		400: OAuthMessageSerializer,
+		401: OAuthMessageSerializer,
+	},
+)
+class ProviderPlaylistView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request, provider: str):
+		if provider not in MusicProvider.values:
+			raise serializers.ValidationError(
+				f'This field must be an valid provider. providers: {" ".join(MusicProvider.values)}'
+			)
+
+		current_user = request.user
+		try:
+			connection = OAuthConnection.objects.get(user=current_user, provider=provider)
+		except OAuthConnection.DoesNotExist:
+			return Response(
+				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				status=status.HTTP_401_UNAUTHORIZED,
+			)
+		provider_class = get_api_interface_class_for_provider(provider)
+		provider_class_instance = provider_class(access_token=connection.access_token)
+
+		playlists_response = provider_class_instance.get_all_playlists()
+		if not playlists_response.success:
+			return Response(
+				{'message': f'Failed to fetch playlists for provider {provider}. {playlists_response.message}'},
+				status=playlists_response.status_code,
+			)
+		
+		serializer = ProviderPlaylistsResponseSerializer(
+			{
+				'data': playlists_response.data,
+				'message': playlists_response.message,
+			}
+		)
+
+		return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(rest_framework.viewsets.ModelViewSet):
