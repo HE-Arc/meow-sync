@@ -10,10 +10,12 @@ from .models import (
 	OAuthConnection,
 	MusicProvider,
 	PlaylistSynchronization,
+	SongIdTranslation,
 )
 from .serializers import (
 	CommentSerializer,
 	PlaylistSynchronizationSerializer,
+	SongIdTranslationSerializer,
 	MeSerializer,
 	OAuthCallbackSuccessSerializer,
 	OAuthLoginResponseSerializer,
@@ -387,6 +389,7 @@ class MeView(APIView):
 	def get(self, request) -> Response:
 		return Response(MeSerializer(request.user).data)
 
+
 @extend_schema(
 	tags=['search'],
 	summary='Search provider for Song',
@@ -408,22 +411,28 @@ class SearchView(APIView):
 
 		if not artist_name or not song_title:
 			return Response(
-				{'message': 'Search query parameters "artistName" and "musicName" are required'},
+				{
+					'message': 'Search query parameters "artistName" and "musicName" are required'
+				},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 
-		if not provider :
+		if not provider:
 			return Response(
 				{'message': 'Search query parameter "provider" is required'},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
-		
+
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.get(user=current_user, provider=provider)
+			connection = OAuthConnection.objects.get(
+				user=current_user, provider=provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
-				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				{
+					'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'
+				},
 				status=status.HTTP_401_UNAUTHORIZED,
 			)
 
@@ -456,6 +465,16 @@ class CommentViewSet(rest_framework.viewsets.ModelViewSet):
 class PlaylistSynchronizationViewSet(rest_framework.viewsets.ModelViewSet):
 	queryset = PlaylistSynchronization.objects.all()
 	serializer_class = PlaylistSynchronizationSerializer
+	authentication_classes = [TokenAuthentication, BasicAuthentication]
+	permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user)
+
+
+class SongIdTranslationViewSet(rest_framework.viewsets.ModelViewSet):
+	queryset = SongIdTranslation.objects.all()
+	serializer_class = SongIdTranslationSerializer
 	authentication_classes = [TokenAuthentication, BasicAuthentication]
 	permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 

@@ -26,12 +26,14 @@ from meow_sync_app.views import (
 	MeView,
 	PlaylistSynchronizationViewSet,
 	SearchView,
+	SongIdTranslationViewSet,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 router = DefaultRouter()
 router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'playlists', PlaylistSynchronizationViewSet, basename='playlist')
+router.register(r'songs', SongIdTranslationViewSet, basename='song')
 
 urlpatterns = [
 	path('admin/', admin.site.urls),
