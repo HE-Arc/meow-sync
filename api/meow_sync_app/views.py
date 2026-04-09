@@ -3,10 +3,17 @@ import string
 import rest_framework.viewsets
 from datetime import datetime, timedelta
 
-from .permissions import IsCommentAuthorOrReadOnly
-from .models import Comment, OAuthState, OAuthConnection, MusicProvider
+from .permissions import IsAuthorOrReadOnly
+from .models import (
+	Comment,
+	OAuthState,
+	OAuthConnection,
+	MusicProvider,
+	PlaylistSynchronization,
+)
 from .serializers import (
 	CommentSerializer,
+	PlaylistSynchronizationSerializer,
 	MeSerializer,
 	OAuthCallbackSuccessSerializer,
 	OAuthLoginResponseSerializer,
@@ -364,7 +371,17 @@ class CommentViewSet(rest_framework.viewsets.ModelViewSet):
 	queryset = Comment.objects.all()
 	serializer_class = CommentSerializer
 	authentication_classes = [TokenAuthentication, BasicAuthentication]
-	permission_classes = [IsAuthenticated, IsCommentAuthorOrReadOnly]
+	permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user)
+
+
+class PlaylistSynchronizationViewSet(rest_framework.viewsets.ModelViewSet):
+	queryset = PlaylistSynchronization.objects.all()
+	serializer_class = PlaylistSynchronizationSerializer
+	authentication_classes = [TokenAuthentication, BasicAuthentication]
+	permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 
 	def perform_create(self, serializer):
 		serializer.save(user=self.request.user)
