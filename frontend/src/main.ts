@@ -21,50 +21,61 @@ const pinia = createPinia();
 app.use(pinia);
 app.use(router);
 app.use(ui);
+function handleError(error: unknown) {
+	const toast = useToast();
+	if (error instanceof ApiError) {
+		const errorDetails = error.errors
+			.map((e) => `${e.attr ?? "non_field_error"}: ${e.detail}`)
+			.join("\n");
+		toast.add({
+			title: `Error ${error.status}`,
+			icon: "lucide:octagon-x",
+			description: errorDetails || "An error occurred.",
+			color: "error",
+		});
+	} else if (error instanceof TypeError) {
+		if (error.message.includes("NetworkError")) {
+			toast.add({
+				title: "Error",
+				icon: "lucide:wifi-off",
+				description: "Failed to contact backend server.",
+				color: "error",
+			});
+		} else {
+			toast.add({
+				title: "Error",
+				icon: "lucide:octagon-x",
+				description: error.message,
+				color: "error",
+			});
+			console.error("An unexpected error occurred:", error);
+		}
+	} else {
+		console.error("An unexpected error occurred:", error);
+		toast.add({
+			title: "Error",
+			icon: "lucide:octagon-x",
+			description: "An unexpected error occurred.",
+			color: "error",
+		});
+	}
+}
+
 app.use(PiniaColada, {
 	plugins: [
 		PiniaColadaQueryHooksPlugin({
 			onError(error, _entry) {
-				const toast = useToast();
-				if (error instanceof ApiError) {
-					const errorDetails = error.errors
-						.map((e) => `${e.attr ?? "non_field_error"}: ${e.detail}`)
-						.join("\n");
-					toast.add({
-						title: `Error ${error.status}`,
-						icon: "lucide:octagon-x",
-						description: errorDetails || "An error occurred.",
-						color: "error",
-					});
-				} else if (error instanceof TypeError) {
-					if (error.message.includes("NetworkError")) {
-						toast.add({
-							title: "Error",
-							icon: "lucide:wifi-off",
-							description: "Failed to contact backend server.",
-							color: "error",
-						});
-					} else {
-						toast.add({
-							title: "Error",
-							icon: "lucide:octagon-x",
-							description: error.message,
-							color: "error",
-						});
-						console.error("An unexpected error occurred:", error);
-					}
-				} else {
-					console.error("An unexpected error occurred:", error);
-					toast.add({
-						title: "Error",
-						icon: "lucide:octagon-x",
-						description: "An unexpected error occurred.",
-						color: "error",
-					});
-				}
+				console.error("Query error:", error);
+				handleError(error);
 			},
 		}),
 	],
+	mutationOptions: {
+		onError(error) {
+			console.error("Mutation error:", error);
+			handleError(error);
+		},
+	},
 });
 // Register API middlewares after pinia is installed so stores are available
 client.use(authMiddleware);
