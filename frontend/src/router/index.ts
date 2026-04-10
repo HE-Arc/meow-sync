@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useApiToken } from "@/composables/useAuth";
 import LoginCallback from "@/views/LoginCallback.vue";
 import NewPlaylistView from "@/views/playlists/NewPlaylistView.vue";
 import PlaylistDetailsView from "@/views/playlists/PlaylistDetailsView.vue";
@@ -50,6 +51,12 @@ const router = createRouter({
 			],
 		},
 		{
+			path: "/settings",
+			name: "settings",
+			meta: { requiresAuth: true },
+			component: () => import("../views/SettingsView.vue"),
+		},
+		{
 			path: "/about",
 			name: "about",
 			component: () => import("../views/AboutView.vue"),
@@ -76,8 +83,7 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
 	const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
 	if (requiresAuth) {
-		const { useAuthStore } = await import("@/stores/auth");
-		const { isAuthenticated } = useAuthStore();
+		const { isAuthenticated } = useApiToken();
 		if (!isAuthenticated) {
 			next("/");
 			return;

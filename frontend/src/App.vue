@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
 import { defineShortcuts } from "@nuxt/ui/runtime/composables/defineShortcuts.js";
+import { PiniaColadaDevtools } from "@pinia/colada-devtools";
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import AppIconWithText from "./components/icons/AppIconWithText.vue";
+import { useUserInfo } from "./composables/useUserInfo";
 
 const route = useRoute();
 const router = useRouter();
+const { user, isUserLoading } = useUserInfo();
 
 const items = computed<NavigationMenuItem[]>(() => [
   {
@@ -58,6 +61,20 @@ defineShortcuts({
               aria-label="GitHub"
             />
           </UTooltip>
+
+          <RouterLink
+            v-if="user"
+            to="/settings"
+            class="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <USkeleton v-if="isUserLoading" class="h-8 w-8 rounded-full" />
+            <template v-else-if="user">
+              <UAvatar :alt="user.username" size="sm" />
+              <span class="text-sm font-medium hidden sm:block">{{
+                user.username
+              }}</span>
+            </template>
+          </RouterLink>
         </template>
         <template #body>
           <UNavigationMenu
@@ -80,4 +97,5 @@ defineShortcuts({
       </UFooter>
     </UApp>
   </Suspense>
+  <PiniaColadaDevtools />
 </template>
