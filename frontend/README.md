@@ -9,6 +9,6 @@ cp .env.example .env
 ```
 Then you can install the dependencies and start the development server:
 ```bash
-npm instal
+npm install
 npm run dev
 ```
