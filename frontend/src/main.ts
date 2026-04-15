@@ -5,6 +5,7 @@ import ui from "@nuxt/ui/vue-plugin";
 import { PiniaColada, PiniaColadaQueryHooksPlugin } from "@pinia/colada";
 import { createPinia } from "pinia";
 import { createApp } from "vue";
+import { useRouter } from "vue-router";
 import App from "./App.vue";
 import {
 	ApiError,
@@ -23,7 +24,13 @@ app.use(router);
 app.use(ui);
 function handleError(error: unknown) {
 	const toast = useToast();
+	const router = useRouter();
+
 	if (error instanceof ApiError) {
+		if (error.status === 404) {
+			router.push("/404");
+			return;
+		}
 		const errorDetails = error.errors
 			.map((e) => `${e.attr ?? "non_field_error"}: ${e.detail}`)
 			.join("\n");
