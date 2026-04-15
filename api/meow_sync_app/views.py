@@ -485,9 +485,7 @@ class SearchView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.get(
-				user=current_user, provider=provider
-			)
+			connection = _get_oauth_connection_for_user_and_provider(current_user, provider)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -534,11 +532,7 @@ class ProviderPlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.filter(
-				user=current_user, provider=provider
-			).last()
-			if not connection:
-				raise OAuthConnection.DoesNotExist
+			connection = _get_oauth_connection_for_user_and_provider(current_user, provider)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -590,11 +584,7 @@ class ProviderSinglePlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.filter(
-				user=current_user, provider=provider
-			).last()
-			if not connection:
-				raise OAuthConnection.DoesNotExist
+			connection = _get_oauth_connection_for_user_and_provider(current_user, provider)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -656,14 +646,8 @@ class SyncPlaylist(APIView):
 			)
 
 		try:
-			connection_1 = OAuthConnection.objects.filter(
-				user=current_user, provider=playlist_sync.first_provider
-			).last()
-			connection_2 = OAuthConnection.objects.filter(
-				user=current_user, provider=playlist_sync.second_provider
-			).last()
-			if not connection_1 or not connection_2:
-				raise OAuthConnection.DoesNotExist
+			connection_1 = _get_oauth_connection_for_user_and_provider(current_user, playlist_sync.first_provider)
+			connection_2 = _get_oauth_connection_for_user_and_provider(current_user, playlist_sync.second_provider)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{'message': 'No connection found for one of the providers.'},
