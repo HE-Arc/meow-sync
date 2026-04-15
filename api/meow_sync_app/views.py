@@ -119,9 +119,7 @@ def _ensure_access_token_valid(oauth_connection: OAuthConnection) -> bool:
 		return False
 
 	try:
-		new_tokens = provider_api_class.refresh_token(
-			oauth_connection.refresh_token
-		)
+		new_tokens = provider_api_class.refresh_token(oauth_connection.refresh_token)
 
 		oauth_connection.access_token = new_tokens.access_token
 		oauth_connection.refresh_token = new_tokens.refresh_token
@@ -134,11 +132,12 @@ def _ensure_access_token_valid(oauth_connection: OAuthConnection) -> bool:
 		print(f'Error refreshing tokens for provider {oauth_connection.provider}: {e}')
 		return False
 
-def _get_oauth_connection_for_user_and_provider(user: User, provider: str) -> OAuthConnection | None:
+
+def _get_oauth_connection_for_user_and_provider(
+	user: User, provider: str
+) -> OAuthConnection | None:
 	try:
-		connection = OAuthConnection.objects.filter(
-			user=user, provider=provider
-		).last()
+		connection = OAuthConnection.objects.filter(user=user, provider=provider).last()
 		if not connection:
 			raise OAuthConnection.DoesNotExist
 		if _ensure_access_token_valid(connection):
@@ -149,8 +148,11 @@ def _get_oauth_connection_for_user_and_provider(user: User, provider: str) -> OA
 			)
 			return None
 	except OAuthConnection.DoesNotExist:
-		print(f'No OAuthConnection found for user {user.username} and provider {provider}.')
+		print(
+			f'No OAuthConnection found for user {user.username} and provider {provider}.'
+		)
 		return None
+
 
 def random_str_alphanum(length: int) -> str:
 	return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
@@ -432,6 +434,7 @@ class OAuthDisconnectView(APIView):
 				status=status.HTTP_404_NOT_FOUND,
 			)
 
+
 @extend_schema(
 	tags=['users'],
 	summary='Get current user',
@@ -485,7 +488,9 @@ class SearchView(APIView):
 
 		current_user = request.user
 		try:
-			connection = _get_oauth_connection_for_user_and_provider(current_user, provider)
+			connection = _get_oauth_connection_for_user_and_provider(
+				current_user, provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -532,7 +537,9 @@ class ProviderPlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = _get_oauth_connection_for_user_and_provider(current_user, provider)
+			connection = _get_oauth_connection_for_user_and_provider(
+				current_user, provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -584,7 +591,9 @@ class ProviderSinglePlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = _get_oauth_connection_for_user_and_provider(current_user, provider)
+			connection = _get_oauth_connection_for_user_and_provider(
+				current_user, provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -646,8 +655,12 @@ class SyncPlaylist(APIView):
 			)
 
 		try:
-			connection_1 = _get_oauth_connection_for_user_and_provider(current_user, playlist_sync.first_provider)
-			connection_2 = _get_oauth_connection_for_user_and_provider(current_user, playlist_sync.second_provider)
+			connection_1 = _get_oauth_connection_for_user_and_provider(
+				current_user, playlist_sync.first_provider
+			)
+			connection_2 = _get_oauth_connection_for_user_and_provider(
+				current_user, playlist_sync.second_provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{'message': 'No connection found for one of the providers.'},
