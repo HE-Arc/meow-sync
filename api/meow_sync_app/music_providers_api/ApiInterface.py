@@ -91,6 +91,12 @@ class ApiError(ApiResponse):
 		self.message: str = message
 
 
+class ApiSearchQuery:
+	def __init__(self, artist_name: str, song_title: str):
+		self.artist_name: str = artist_name.strip()
+		self.song_title: str = song_title.strip()
+
+
 class ApiInterface:
 	@classmethod
 	def login_url(cls, state: str) -> str:
@@ -115,7 +121,9 @@ class ApiInterface:
 			'Method not implemented, this is an abstract class ApiInterface'
 		)
 
-	def search_song(self, query: str):
+	def search_song(
+		self, query: ApiSearchQuery
+	) -> ApiSuccess[list[ApiSong]] | ApiError:
 		raise ValueError(
 			'Method not implemented, this is an abstract class ApiInterface'
 		)

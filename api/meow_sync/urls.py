@@ -25,7 +25,11 @@ from meow_sync_app.views import (
 	CommentViewSet,
 	MeView,
 	PlaylistSynchronizationViewSet,
+	SearchView,
 	SongIdTranslationViewSet,
+	ProviderPlaylistView,
+	ProviderSinglePlaylistView,
+	SyncPlaylist,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -57,5 +61,21 @@ urlpatterns = [
 		name='oauth-disconnect',
 	),
 	path('api/users/me/', MeView.as_view(), name='users-me'),
+	path('api/<str:provider>/search/', SearchView.as_view(), name='provider-search'),
+	path(
+		'api/<str:provider>/playlists/',
+		ProviderPlaylistView.as_view(),
+		name='provider-playlists',
+	),
+	path(
+		'api/<str:provider>/playlists/<str:playlist_id>',
+		ProviderSinglePlaylistView.as_view(),
+		name='provider-single-playlist',
+	),
+	path(
+		'api/playlists-sync/<str:playlist_sync_id>',
+		SyncPlaylist.as_view(),
+		name='provider-single-playlist',
+	),
 	path('api/', include(router.urls)),
 ]
