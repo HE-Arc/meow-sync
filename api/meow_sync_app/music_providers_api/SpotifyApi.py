@@ -178,8 +178,7 @@ class SpotifyApi(ApiInterface):
 
 		return result
 
-	def get_playlist(self, playlist_id: str) -> ApiSuccess[ApiPlaylist] | ApiError:
-		songs = []
+	def get_playlist(self, playlist_id: str, include_songs=False) -> ApiSuccess[ApiPlaylist] | ApiError:
 		current_song_page_url = f'{self.API_BASE_URL}/playlists/{playlist_id}/items'
 
 		try:
@@ -187,8 +186,9 @@ class SpotifyApi(ApiInterface):
 		except Exception as ex:
 			return ApiError(status_code=500, message=str(ex))
 
+		songs = []
 		# get playlist songs
-		while True:
+		while True and include_songs:
 			playlist_songs_response = requests.get(
 				current_song_page_url, headers=self.HEADERS
 			)

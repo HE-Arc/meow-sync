@@ -133,10 +133,13 @@ class ApiInterface:
 			'Method not implemented, this is an abstract class ApiInterface'
 		)
 
-	def get_playlist(self, playlist_id: Any) -> ApiSuccess[ApiPlaylist] | ApiError:
+	def get_playlist(self, playlist_id: str, include_songs=False) -> ApiSuccess[ApiPlaylist] | ApiError:
 		raise ValueError(
 			'Method not implemented, this is an abstract class ApiInterface'
 		)
+	
+	def get_playlist_with_songs(self, playlist_id: str) -> ApiSuccess[ApiPlaylist] | ApiError:
+		return self.get_playlist(playlist_id=playlist_id, include_songs=True)
 
 	def add_to_playlist(
 		self, playlist_id: Any, song_ids: list[Any]
