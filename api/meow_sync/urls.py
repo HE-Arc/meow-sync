@@ -28,6 +28,7 @@ from meow_sync_app.views import (
 	SearchView,
 	SongIdTranslationViewSet,
 	ProviderPlaylistView,
+	ProviderSinglePlaylistView,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -61,5 +62,6 @@ urlpatterns = [
 	path('api/users/me/', MeView.as_view(), name='users-me'),
 	path('api/<str:provider>/search/', SearchView.as_view(), name='provider-search'),
 	path('api/<str:provider>/playlists/', ProviderPlaylistView.as_view(), name='provider-playlists'),
+	path('api/<str:provider>/playlists/<str:playlist_id>', ProviderSinglePlaylistView.as_view(), name='provider-single-playlist'),
 	path('api/', include(router.urls)),
 ]

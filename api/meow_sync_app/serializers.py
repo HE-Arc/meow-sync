@@ -129,3 +129,8 @@ class ApiPlaylistSerializer(serializers.Serializer):
 class ProviderPlaylistsResponseSerializer(serializers.Serializer):
 	data = ApiPlaylistSerializer(many=True)
 	message = serializers.CharField()
+
+class ProviderSinglePlaylistsResponseSerializer(serializers.Serializer):
+	data = ApiPlaylistSerializer()
+	message = serializers.CharField()
+

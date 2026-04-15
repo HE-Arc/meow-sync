@@ -23,6 +23,7 @@ from .serializers import (
 	OAuthMessageSerializer,
 	SearchResponseSerializer,
 	ProviderPlaylistsResponseSerializer,
+	ProviderSinglePlaylistsResponseSerializer,
 )
 from drf_spectacular.utils import (
 	OpenApiParameter,
@@ -56,6 +57,14 @@ PROVIDER_PARAMETER = OpenApiParameter(
 	required=True,
 	enum=[m.value for m in MusicProvider],
 	description='Music provider identifier.',
+)
+
+PLAYLIST_ID_PARAMETER = OpenApiParameter(
+	name='playlist_id',
+	type=str,
+	location=OpenApiParameter.PATH,
+	required=True,
+	description='Playlist id.',
 )
 
 CODE_PARAMETER = OpenApiParameter(
@@ -506,10 +515,53 @@ class ProviderPlaylistView(APIView):
 
 		return Response(serializer.data, status=status.HTTP_200_OK)
 
-	# first_playlist_id = models.CharField(max_length=255)
-	# first_provider = models.CharField(max_length=255, choices=MusicProvider.choices)
-	# second_playlist_id = models.CharField(max_length=255)
-	# second_provider = models.CharField(max_length=255, choices=MusicProvider.choices)
+@extend_schema(
+	tags=['provider'],
+	summary='Get single playlist',
+	description='Interact with provider playlists',
+	parameters=[PROVIDER_PARAMETER, PLAYLIST_ID_PARAMETER],
+	responses={
+		200: ProviderSinglePlaylistsResponseSerializer,
+		400: OAuthMessageSerializer,
+		401: OAuthMessageSerializer,
+	},
+)
+class ProviderSinglePlaylistView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request, provider: str, playlist_id: str):
+		if provider not in MusicProvider.values:
+			raise serializers.ValidationError(
+				f'This field must be an valid provider. providers: {" ".join(MusicProvider.values)}'
+			)
+
+		current_user = request.user
+		try:
+			connection = OAuthConnection.objects.get(user=current_user, provider=provider)
+		except OAuthConnection.DoesNotExist:
+			return Response(
+				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				status=status.HTTP_401_UNAUTHORIZED,
+			)
+		provider_class = get_api_interface_class_for_provider(provider)
+		provider_class_instance = provider_class(access_token=connection.access_token)
+
+		playlist_response = provider_class_instance.get_playlist(playlist_id)
+		if not playlist_response.success:
+			return Response(
+				{'message': f'Failed to fetch playlist for provider {provider}. {playlist_response.message}'},
+				status=playlist_response.status_code,
+			)
+		
+		serializer = ProviderSinglePlaylistsResponseSerializer(
+			{
+				'data': playlist_response.data,
+				'message': playlist_response.message,
+			}
+		)
+
+		return Response(serializer.data, status=status.HTTP_200_OK)
+
 class SyncPlaylist(APIView):
 	permission_classes = [IsAuthenticated]
 
