@@ -58,17 +58,9 @@ PROVIDER_PARAMETER = OpenApiParameter(
 	description='Music provider identifier.',
 )
 
-PLAYLIST_ID_PARAMETER = OpenApiParameter(
-	name='provider_playlist_id',
-	type=str,
-	location=OpenApiParameter.PATH,
-	required=True,
-	description='Playlist id.',
-)
-
 PLAYLIST_SYNC_ID_PARAMETER = OpenApiParameter(
 	name='playlist_sync_id',
-	type=str,
+	type=int,
 	location=OpenApiParameter.PATH,
 	required=True,
 	description='Playlist sync id.',
@@ -573,7 +565,7 @@ class ProviderPlaylistView(APIView):
 	tags=['provider'],
 	summary='Get single playlist',
 	description='Interact with provider playlists',
-	parameters=[PROVIDER_PARAMETER, PLAYLIST_ID_PARAMETER],
+	parameters=[PROVIDER_PARAMETER],
 	responses={
 		200: ProviderSinglePlaylistsResponseSerializer,
 		400: OAuthMessageSerializer,
