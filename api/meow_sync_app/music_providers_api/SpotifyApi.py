@@ -178,7 +178,9 @@ class SpotifyApi(ApiInterface):
 
 		return result
 
-	def get_playlist(self, playlist_id: str, include_songs=False) -> ApiSuccess[ApiPlaylist] | ApiError:
+	def get_playlist(
+		self, playlist_id: str, include_songs=False
+	) -> ApiSuccess[ApiPlaylist] | ApiError:
 		current_song_page_url = f'{self.API_BASE_URL}/playlists/{playlist_id}/items'
 
 		try:
