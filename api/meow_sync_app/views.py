@@ -1,6 +1,5 @@
 import random
 import string
-import json
 import rest_framework.viewsets
 from datetime import datetime, timedelta
 
@@ -38,7 +37,6 @@ from rest_framework.views import APIView
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view
 from .music_providers_api.ApiInterface import (
 	ApiInterface,
 	ApiSuccess,
@@ -477,6 +475,7 @@ class SearchView(APIView):
 		)
 		return Response(serializer.data, status=search_result.status_code)
 
+
 @extend_schema(
 	tags=['provider'],
 	summary='Provider playlists',
@@ -499,12 +498,16 @@ class ProviderPlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.filter(user=current_user, provider=provider).last()
+			connection = OAuthConnection.objects.filter(
+				user=current_user, provider=provider
+			).last()
 			if not connection:
 				raise OAuthConnection.DoesNotExist
 		except OAuthConnection.DoesNotExist:
 			return Response(
-				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				{
+					'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'
+				},
 				status=status.HTTP_401_UNAUTHORIZED,
 			)
 		provider_class = get_api_interface_class_for_provider(provider)
@@ -513,10 +516,12 @@ class ProviderPlaylistView(APIView):
 		playlists_response = provider_class_instance.get_all_playlists()
 		if not playlists_response.success:
 			return Response(
-				{'message': f'Failed to fetch playlists for provider {provider}. {playlists_response.message}'},
+				{
+					'message': f'Failed to fetch playlists for provider {provider}. {playlists_response.message}'
+				},
 				status=playlists_response.status_code,
 			)
-		
+
 		serializer = ProviderPlaylistsResponseSerializer(
 			{
 				'data': playlists_response.data,
@@ -525,6 +530,7 @@ class ProviderPlaylistView(APIView):
 		)
 
 		return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @extend_schema(
 	tags=['provider'],
@@ -548,12 +554,16 @@ class ProviderSinglePlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.filter(user=current_user, provider=provider).last()
+			connection = OAuthConnection.objects.filter(
+				user=current_user, provider=provider
+			).last()
 			if not connection:
 				raise OAuthConnection.DoesNotExist
 		except OAuthConnection.DoesNotExist:
 			return Response(
-				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				{
+					'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'
+				},
 				status=status.HTTP_401_UNAUTHORIZED,
 			)
 		provider_class = get_api_interface_class_for_provider(provider)
@@ -562,10 +572,12 @@ class ProviderSinglePlaylistView(APIView):
 		playlist_response = provider_class_instance.get_playlist(playlist_id)
 		if not playlist_response.success:
 			return Response(
-				{'message': f'Failed to fetch playlist for provider {provider}. {playlist_response.message}'},
+				{
+					'message': f'Failed to fetch playlist for provider {provider}. {playlist_response.message}'
+				},
 				status=playlist_response.status_code,
 			)
-		
+
 		serializer = ProviderSinglePlaylistsResponseSerializer(
 			{
 				'data': playlist_response.data,
@@ -574,6 +586,7 @@ class ProviderSinglePlaylistView(APIView):
 		)
 
 		return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @extend_schema(
 	tags=['provider'],
@@ -593,63 +606,95 @@ class SyncPlaylist(APIView):
 		current_user = request.user
 
 		try:
-			playlist_sync: PlaylistSynchronization = PlaylistSynchronization.objects.get(id=playlist_sync_id, user=current_user)
+			playlist_sync: PlaylistSynchronization = (
+				PlaylistSynchronization.objects.get(
+					id=playlist_sync_id, user=current_user
+				)
+			)
 		except PlaylistSynchronization.DoesNotExist:
 			return Response(
-				{'message': f'No playlist synchronization found with id {playlist_sync_id} for current user.'},
+				{
+					'message': f'No playlist synchronization found with id {playlist_sync_id} for current user.'
+				},
 				status=status.HTTP_404_NOT_FOUND,
 			)
 
 		try:
-			connection_1 = OAuthConnection.objects.filter(user=current_user, provider=playlist_sync.first_provider).last()
-			connection_2 = OAuthConnection.objects.filter(user=current_user, provider=playlist_sync.second_provider).last()
+			connection_1 = OAuthConnection.objects.filter(
+				user=current_user, provider=playlist_sync.first_provider
+			).last()
+			connection_2 = OAuthConnection.objects.filter(
+				user=current_user, provider=playlist_sync.second_provider
+			).last()
 			if not connection_1 or not connection_2:
 				raise OAuthConnection.DoesNotExist
 		except OAuthConnection.DoesNotExist:
 			return Response(
-				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
+				{'message': 'No connection found for one of the providers.'},
 				status=status.HTTP_401_UNAUTHORIZED,
 			)
-		
-		provider_class_1 = get_api_interface_class_for_provider(playlist_sync.first_provider)
-		provider_class_2 = get_api_interface_class_for_provider(playlist_sync.second_provider)
-		provider_class_instance_1: ApiInterface = provider_class_1(access_token=connection_1.access_token)
-		provider_class_instance_2: ApiInterface = provider_class_2(access_token=connection_2.access_token)
 
-		# get songs for first provider 
-		playlist_response_1 = provider_class_instance_1.get_playlist(playlist_sync.first_playlist_id)
+		provider_class_1 = get_api_interface_class_for_provider(
+			playlist_sync.first_provider
+		)
+		provider_class_2 = get_api_interface_class_for_provider(
+			playlist_sync.second_provider
+		)
+		provider_class_instance_1: ApiInterface = provider_class_1(
+			access_token=connection_1.access_token
+		)
+		provider_class_instance_2: ApiInterface = provider_class_2(
+			access_token=connection_2.access_token
+		)
+
+		# get songs for first provider
+		playlist_response_1 = provider_class_instance_1.get_playlist(
+			playlist_sync.first_playlist_id
+		)
 		if not playlist_response_1.success:
-			print("prov1 status: ", playlist_response_1.status_code)
+			print('prov1 status: ', playlist_response_1.status_code)
 			return Response(
-				{'message': f'Failed to fetch songs for provider {playlist_sync.first_provider} and playlist {playlist_sync.first_playlist_id}. {playlist_response_1.message}'},
+				{
+					'message': f'Failed to fetch songs for provider {playlist_sync.first_provider} and playlist {playlist_sync.first_playlist_id}. {playlist_response_1.message}'
+				},
 				status=playlist_response_1.status_code,
 			)
 		songs_original = playlist_response_1.data.songs
 
-		# get songs for second provider 
-		playlist_response_2 = provider_class_instance_2.get_playlist(playlist_sync.second_playlist_id)
+		# get songs for second provider
+		playlist_response_2 = provider_class_instance_2.get_playlist(
+			playlist_sync.second_playlist_id
+		)
 		if not playlist_response_2.success:
-			print("prov2 status: ", playlist_response_2.status_code)
+			print('prov2 status: ', playlist_response_2.status_code)
 			return Response(
-				{'message': f'Failed to fetch songs for provider {playlist_sync.second_provider} and playlist {playlist_sync.second_playlist_id}. {playlist_response_2.message}'},
+				{
+					'message': f'Failed to fetch songs for provider {playlist_sync.second_provider} and playlist {playlist_sync.second_playlist_id}. {playlist_response_2.message}'
+				},
 				status=playlist_response_2.status_code,
 			)
-		songs_target = playlist_response_2.data.songs
+
 		songs_target_ids = [s.id for s in playlist_response_2.data.songs]
-		print("PRESENT IDS: ", songs_target_ids)
+		print('PRESENT IDS: ', songs_target_ids)
 
 		# translate songs
 		songs_translated = []
 		error_bag = []
 		for song_o in songs_original:
-			search_response = provider_class_instance_2.search_song(ApiSearchQuery(artist_name=song_o.artist, song_title=song_o.title))
+			search_response = provider_class_instance_2.search_song(
+				ApiSearchQuery(artist_name=song_o.artist, song_title=song_o.title)
+			)
 			if not search_response.success:
-				error_bag.append(f"[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] {search_response.message}")
+				error_bag.append(
+					f'[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] {search_response.message}'
+				)
 				continue
 
 			search_results = search_response.data
 			if len(search_results) == 0:
-				error_bag.append(f"[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] No corresponding song found.")
+				error_bag.append(
+					f'[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] No corresponding song found.'
+				)
 				continue
 
 			search_result = search_results[0]
@@ -659,23 +704,24 @@ class SyncPlaylist(APIView):
 				continue
 
 			songs_translated.append(search_result)
-		
+
 		translated_ids = [s.id for s in songs_translated]
-		print("TO ADD: ", translated_ids)
-		provider_class_instance_2.add_to_playlist(playlist_sync.second_playlist_id, translated_ids)
+		print('TO ADD: ', translated_ids)
+		provider_class_instance_2.add_to_playlist(
+			playlist_sync.second_playlist_id, translated_ids
+		)
 		# TODO: swagger and testing
-		
+
 		message = 'Successfully synced playlists.'
 		current_status = status.HTTP_200_OK
 
 		if len(error_bag) > 0:
-			message = f'Failed to sync some songs: ' + ',\n'.join(error_bag),
-			current_status = status.HTTP_206_PARTIAL_CONTENT,
+			message = ('Failed to sync some songs.',)
+			current_status = (status.HTTP_206_PARTIAL_CONTENT,)
 
-		serializer = SyncPlaylistResponseSerializer({
-			'message': message,
-			'errors': error_bag
-		})
+		serializer = SyncPlaylistResponseSerializer(
+			{'message': message, 'errors': error_bag}
+		)
 
 		return Response(serializer.data, status=current_status)
 
@@ -708,4 +754,3 @@ class SongIdTranslationViewSet(rest_framework.viewsets.ModelViewSet):
 
 	def perform_create(self, serializer):
 		serializer.save(user=self.request.user)
-		

@@ -110,12 +110,15 @@ class ApiSongSerializer(serializers.Serializer):
 	artist = serializers.CharField(help_text='Artist name')
 	image_url = serializers.URLField(allow_null=True, help_text='Image URL')
 	release_date = serializers.DateTimeField(help_text='Publish date')
-	duration_ms = serializers.IntegerField(help_text='Duration of the song in milliseconds', required=False)
+	duration_ms = serializers.IntegerField(
+		help_text='Duration of the song in milliseconds', required=False
+	)
 
 
 class SearchResponseSerializer(serializers.Serializer):
 	data = ApiSongSerializer(many=True)
 	message = serializers.CharField()
+
 
 class ApiPlaylistSerializer(serializers.Serializer):
 	id = serializers.CharField(help_text='playlist ID')
@@ -130,14 +133,14 @@ class ProviderPlaylistsResponseSerializer(serializers.Serializer):
 	data = ApiPlaylistSerializer(many=True)
 	message = serializers.CharField()
 
+
 class ProviderSinglePlaylistsResponseSerializer(serializers.Serializer):
 	data = ApiPlaylistSerializer()
 	message = serializers.CharField()
 
+
 class SyncPlaylistResponseSerializer(serializers.Serializer):
 	message = serializers.CharField()
 	errors = serializers.ListField(
-		child=serializers.CharField(),
-		required=False,
-		allow_empty=True
+		child=serializers.CharField(), required=False, allow_empty=True
 	)
