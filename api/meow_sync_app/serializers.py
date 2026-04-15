@@ -134,3 +134,10 @@ class ProviderSinglePlaylistsResponseSerializer(serializers.Serializer):
 	data = ApiPlaylistSerializer()
 	message = serializers.CharField()
 
+class SyncPlaylistResponseSerializer(serializers.Serializer):
+	message = serializers.CharField()
+	errors = serializers.ListField(
+		child=serializers.CharField(),
+		required=False,
+		allow_empty=True
+	)

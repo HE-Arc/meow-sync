@@ -24,6 +24,7 @@ from .serializers import (
 	SearchResponseSerializer,
 	ProviderPlaylistsResponseSerializer,
 	ProviderSinglePlaylistsResponseSerializer,
+	SyncPlaylistResponseSerializer,
 )
 from drf_spectacular.utils import (
 	OpenApiParameter,
@@ -60,11 +61,19 @@ PROVIDER_PARAMETER = OpenApiParameter(
 )
 
 PLAYLIST_ID_PARAMETER = OpenApiParameter(
-	name='playlist_id',
+	name='provider_playlist_id',
 	type=str,
 	location=OpenApiParameter.PATH,
 	required=True,
 	description='Playlist id.',
+)
+
+PLAYLIST_SYNC_ID_PARAMETER = OpenApiParameter(
+	name='playlist_sync_id',
+	type=str,
+	location=OpenApiParameter.PATH,
+	required=True,
+	description='Playlist sync id.',
 )
 
 CODE_PARAMETER = OpenApiParameter(
@@ -490,7 +499,9 @@ class ProviderPlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.get(user=current_user, provider=provider)
+			connection = OAuthConnection.objects.filter(user=current_user, provider=provider).last()
+			if not connection:
+				raise OAuthConnection.DoesNotExist
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
@@ -537,7 +548,9 @@ class ProviderSinglePlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.get(user=current_user, provider=provider)
+			connection = OAuthConnection.objects.filter(user=current_user, provider=provider).last()
+			if not connection:
+				raise OAuthConnection.DoesNotExist
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
@@ -562,10 +575,20 @@ class ProviderSinglePlaylistView(APIView):
 
 		return Response(serializer.data, status=status.HTTP_200_OK)
 
+@extend_schema(
+	tags=['provider'],
+	summary='Sync playlists',
+	description='Interact with provider playlists',
+	parameters=[PLAYLIST_SYNC_ID_PARAMETER],
+	responses={
+		200: SyncPlaylistResponseSerializer,
+		400: OAuthMessageSerializer,
+		401: OAuthMessageSerializer,
+	},
+)
 class SyncPlaylist(APIView):
 	permission_classes = [IsAuthenticated]
 
-	@api_view(['POST'])
 	def post(self, request, playlist_sync_id: int):
 		current_user = request.user
 
@@ -578,8 +601,10 @@ class SyncPlaylist(APIView):
 			)
 
 		try:
-			connection_1 = OAuthConnection.objects.get(user=current_user, provider=playlist_sync.first_provider)
-			connection_2 = OAuthConnection.objects.get(user=current_user, provider=playlist_sync.second_provider)
+			connection_1 = OAuthConnection.objects.filter(user=current_user, provider=playlist_sync.first_provider).last()
+			connection_2 = OAuthConnection.objects.filter(user=current_user, provider=playlist_sync.second_provider).last()
+			if not connection_1 or not connection_2:
+				raise OAuthConnection.DoesNotExist
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{'message': f'No connection found for provider {provider}. Please connect your {provider} account first.'},
@@ -592,13 +617,26 @@ class SyncPlaylist(APIView):
 		provider_class_instance_2: ApiInterface = provider_class_2(access_token=connection_2.access_token)
 
 		# get songs for first provider 
-		playlist_response = provider_class_instance_1.get_playlist(playlist_sync.first_playlist_id)
-		if not playlist_response.success:
+		playlist_response_1 = provider_class_instance_1.get_playlist(playlist_sync.first_playlist_id)
+		if not playlist_response_1.success:
+			print("prov1 status: ", playlist_response_1.status_code)
 			return Response(
-				{'message': f'Failed to fetch songs for provider {provider} and playlist {playlist_sync.first_playlist_id}. {playlist_response.message}'},
-				status=playlist_response.status_code,
+				{'message': f'Failed to fetch songs for provider {playlist_sync.first_provider} and playlist {playlist_sync.first_playlist_id}. {playlist_response_1.message}'},
+				status=playlist_response_1.status_code,
 			)
-		songs_original = playlist_response.data.songs
+		songs_original = playlist_response_1.data.songs
+
+		# get songs for second provider 
+		playlist_response_2 = provider_class_instance_2.get_playlist(playlist_sync.second_playlist_id)
+		if not playlist_response_2.success:
+			print("prov2 status: ", playlist_response_2.status_code)
+			return Response(
+				{'message': f'Failed to fetch songs for provider {playlist_sync.second_provider} and playlist {playlist_sync.second_playlist_id}. {playlist_response_2.message}'},
+				status=playlist_response_2.status_code,
+			)
+		songs_target = playlist_response_2.data.songs
+		songs_target_ids = [s.id for s in playlist_response_2.data.songs]
+		print("PRESENT IDS: ", songs_target_ids)
 
 		# translate songs
 		songs_translated = []
@@ -608,27 +646,39 @@ class SyncPlaylist(APIView):
 			if not search_response.success:
 				error_bag.append(f"[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] {search_response.message}")
 				continue
+
 			search_results = search_response.data
 			if len(search_results) == 0:
 				error_bag.append(f"[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] No corresponding song found.")
 				continue
-			
-			songs_translated.append(search_results[0])
+
+			search_result = search_results[0]
+
+			# do not add same song twice
+			if search_result.id in songs_target_ids:
+				continue
+
+			songs_translated.append(search_result)
 		
 		translated_ids = [s.id for s in songs_translated]
+		print("TO ADD: ", translated_ids)
 		provider_class_instance_2.add_to_playlist(playlist_sync.second_playlist_id, translated_ids)
 		# TODO: swagger and testing
 		
-		if len(error_bag) > 0:
-			return Response(
-				{'message': f'Failed to sync some songs: ' + ',\n'.join(error_bag)},
-				status=status.HTTP_206_PARTIAL_CONTENT,
-			)
+		message = 'Successfully synced playlists.'
+		current_status = status.HTTP_200_OK
 
-		return Response(
-			{'message': f'Successfully synced playlists.'},
-			status=status.HTTP_200_OK,
-		)
+		if len(error_bag) > 0:
+			message = f'Failed to sync some songs: ' + ',\n'.join(error_bag),
+			current_status = status.HTTP_206_PARTIAL_CONTENT,
+
+		serializer = SyncPlaylistResponseSerializer({
+			'message': message,
+			'errors': error_bag
+		})
+
+		return Response(serializer.data, status=current_status)
+
 
 class CommentViewSet(rest_framework.viewsets.ModelViewSet):
 	queryset = Comment.objects.all()

@@ -197,7 +197,7 @@ class YoutubeApi(ApiInterface):
 		try:
 			playlist_info = self._get_playlist_info(playlist_id)
 		except Exception as ex:
-			return ApiError(status_code=0, message=str(ex))
+			return ApiError(status_code=500, message=str(ex))
 		result = playlist_info.data
 
 		songs: list[ApiSong] = []

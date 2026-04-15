@@ -185,7 +185,7 @@ class SpotifyApi(ApiInterface):
 		try:
 			result = self._get_playlist_info(playlist_id)
 		except Exception as ex:
-			return ApiError(status_code=0, message=str(ex))
+			return ApiError(status_code=500, message=str(ex))
 
 		# get playlist songs
 		while True:
