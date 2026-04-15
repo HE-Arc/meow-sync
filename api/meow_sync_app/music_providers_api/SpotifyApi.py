@@ -73,6 +73,35 @@ class SpotifyApi(ApiInterface):
 			expires_in=expires_in,
 		)
 
+	@classmethod
+	def refresh_token(cls, refresh_token: str) -> ApiTokens:
+		auth_header = base64.b64encode(
+			f'{cls.CLIENT_ID}:{cls.CLIENT_SECRET}'.encode()
+		).decode()
+
+		token_data = {
+			'grant_type': 'refresh_token',
+			'refresh_token': refresh_token,
+		}
+
+		token_headers = {
+			'Authorization': f'Basic {auth_header}',
+			'Content-Type': 'application/x-www-form-urlencoded',
+		}
+
+		response = requests.post(cls.TOKEN_URL, data=token_data, headers=token_headers)
+		token_info = response.json()
+
+		access_token = token_info['access_token']
+		new_refresh_token = token_info.get('refresh_token', refresh_token)
+		expires_in = token_info['expires_in']
+
+		return ApiTokens(
+			access_token=access_token,
+			refresh_token=new_refresh_token,
+			expires_in=expires_in,
+		)
+
 	def __init__(self, access_token: str):
 		self.HEADERS = {'Authorization': f'Bearer {access_token}'}
 		self.MAX_SONG_CHUNK_SIZE = 100

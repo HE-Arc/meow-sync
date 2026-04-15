@@ -107,6 +107,53 @@ MUSICNAME_PARAMETER = OpenApiParameter(
 )
 
 
+def _ensure_access_token_valid(oauth_connection: OAuthConnection) -> bool:
+	if oauth_connection.token_expires_at.timestamp() > datetime.now().timestamp():
+		return True
+
+	provider_api_class = get_api_interface_class_for_provider(oauth_connection.provider)
+	if not provider_api_class:
+		print(
+			f'Could not find API class for provider {oauth_connection.provider} when refreshing tokens.'
+		)
+		return False
+
+	try:
+		new_tokens = provider_api_class.refresh_token(oauth_connection.refresh_token)
+
+		oauth_connection.access_token = new_tokens.access_token
+		oauth_connection.refresh_token = new_tokens.refresh_token
+		oauth_connection.token_expires_at = datetime.now() + timedelta(
+			seconds=(new_tokens.expires_in - 5)
+		)
+		oauth_connection.save()
+		return True
+	except Exception as e:
+		print(f'Error refreshing tokens for provider {oauth_connection.provider}: {e}')
+		return False
+
+
+def _get_oauth_connection_for_user_and_provider(
+	user: User, provider: str
+) -> OAuthConnection | None:
+	try:
+		connection = OAuthConnection.objects.filter(user=user, provider=provider).last()
+		if not connection:
+			raise OAuthConnection.DoesNotExist
+		if _ensure_access_token_valid(connection):
+			return connection
+		else:
+			print(
+				f'Access token for provider {provider} is expired and could not be refreshed.'
+			)
+			return None
+	except OAuthConnection.DoesNotExist:
+		print(
+			f'No OAuthConnection found for user {user.username} and provider {provider}.'
+		)
+		return None
+
+
 def random_str_alphanum(length: int) -> str:
 	return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
@@ -367,10 +414,13 @@ class OAuthDisconnectView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.get(
+			connection = OAuthConnection.objects.filter(
 				user=current_user, provider=provider
 			)
-			connection.delete()
+			if len(connection) == 0:
+				raise OAuthConnection.DoesNotExist
+			for c in connection:
+				c.delete()
 			return Response(
 				{
 					'message': f'Successfully disconnected from {MusicProvider(provider).label}.'
@@ -382,17 +432,6 @@ class OAuthDisconnectView(APIView):
 			return Response(
 				{'message': f'OAuthConnection does not exist for provider: {provider}'},
 				status=status.HTTP_404_NOT_FOUND,
-			)
-		except OAuthConnection.MultipleObjectsReturned:
-			print(
-				f'More than one OAuthConnection with the same provider: {provider}. Something went horribly wrong.'
-			)
-
-			return Response(
-				{
-					'message': f'More than one OAuthConnection with the same provider: {provider}. Something went horribly wrong.'
-				},
-				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
 			)
 
 
@@ -449,8 +488,8 @@ class SearchView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.get(
-				user=current_user, provider=provider
+			connection = _get_oauth_connection_for_user_and_provider(
+				current_user, provider
 			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
@@ -498,11 +537,9 @@ class ProviderPlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.filter(
-				user=current_user, provider=provider
-			).last()
-			if not connection:
-				raise OAuthConnection.DoesNotExist
+			connection = _get_oauth_connection_for_user_and_provider(
+				current_user, provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -554,11 +591,9 @@ class ProviderSinglePlaylistView(APIView):
 
 		current_user = request.user
 		try:
-			connection = OAuthConnection.objects.filter(
-				user=current_user, provider=provider
-			).last()
-			if not connection:
-				raise OAuthConnection.DoesNotExist
+			connection = _get_oauth_connection_for_user_and_provider(
+				current_user, provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{
@@ -620,14 +655,12 @@ class SyncPlaylist(APIView):
 			)
 
 		try:
-			connection_1 = OAuthConnection.objects.filter(
-				user=current_user, provider=playlist_sync.first_provider
-			).last()
-			connection_2 = OAuthConnection.objects.filter(
-				user=current_user, provider=playlist_sync.second_provider
-			).last()
-			if not connection_1 or not connection_2:
-				raise OAuthConnection.DoesNotExist
+			connection_1 = _get_oauth_connection_for_user_and_provider(
+				current_user, playlist_sync.first_provider
+			)
+			connection_2 = _get_oauth_connection_for_user_and_provider(
+				current_user, playlist_sync.second_provider
+			)
 		except OAuthConnection.DoesNotExist:
 			return Response(
 				{'message': 'No connection found for one of the providers.'},
