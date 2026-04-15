@@ -4,6 +4,7 @@ import type { components, paths } from "./schema.d.ts";
 
 export type Comment = components["schemas"]["Comment"];
 export type UserInfo = components["schemas"]["Me"];
+export type Playlist = components["schemas"]["PlaylistSynchronization"];
 
 export const client = createClient<paths>({
 	baseUrl: import.meta.env.VITE_API_URL,
