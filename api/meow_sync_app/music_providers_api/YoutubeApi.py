@@ -76,6 +76,30 @@ class YoutubeApi(ApiInterface):
 			expires_in=expires_in,
 		)
 
+	@classmethod
+	def refresh_token(cls, refresh_token: str) -> ApiTokens:
+		response = requests.post(
+			cls.TOKEN_URL,
+			data={
+				'client_id': cls.CLIENT_ID,
+				'client_secret': cls.CLIENT_SECRET,
+				'grant_type': 'refresh_token',
+				'refresh_token': refresh_token,
+			},
+		)
+		token_info = response.json()
+		print(f'Token refresh response: {token_info}')
+
+		access_token = token_info['access_token']
+		new_refresh_token = token_info.get('refresh_token', refresh_token)
+		expires_in = token_info['expires_in']
+
+		return ApiTokens(
+			access_token=access_token,
+			refresh_token=new_refresh_token,
+			expires_in=expires_in,
+		)
+
 	def __init__(self, access_token):
 		self.HEADERS = {'Authorization': f'Bearer {access_token}'}
 

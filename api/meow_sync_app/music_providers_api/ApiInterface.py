@@ -126,6 +126,12 @@ class ApiInterface:
 	) -> ApiSuccess[list[ApiSong]] | ApiError:
 		raise ValueError(
 			'Method not implemented, this is an abstract class ApiInterface'
+	)
+
+	@classmethod
+	def refresh_token(cls, refresh_token: str) -> ApiTokens:
+		raise ValueError(
+			'Method not implemented, this is an abstract class ApiInterface'
 		)
 
 	def get_all_playlists(self) -> ApiSuccess[list[ApiPlaylist]] | ApiError:
