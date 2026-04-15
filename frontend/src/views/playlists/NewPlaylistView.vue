@@ -5,11 +5,13 @@ import { useRoute, useRouter } from "vue-router";
 import { PlaylistSchema, type PlaylistWithId } from "@/api/Playlist";
 import {
     createPlaylist,
-    useFirstProviderPlaylists,
     usePlaylist,
-    useSecondProviderPlaylists,
     useUpdatePlaylist,
 } from "@/composables/usePlaylist";
+import {
+    useFirstProviderPlaylists,
+    useSecondProviderPlaylists,
+} from "@/composables/usePlaylistProvider";
 import {
     ProvidersInformations,
     type SyncProvider,
