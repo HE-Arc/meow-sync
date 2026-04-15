@@ -11,7 +11,6 @@ from .ApiInterface import (
 	ApiSong,
 	ApiSearchQuery,
 )
-from typing import Any
 
 
 class YoutubeApi(ApiInterface):
@@ -192,7 +191,9 @@ class YoutubeApi(ApiInterface):
 			data=self._parse_playlist(data['items'][0]),
 		)
 
-	def get_playlist(self, playlist_id: Any) -> ApiSuccess[ApiPlaylist] | ApiError:
+	def get_playlist(
+		self, playlist_id: str, include_songs=False
+	) -> ApiSuccess[ApiPlaylist] | ApiError:
 		song_page_url = f'{self.API_BASE_URL}/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}'
 		try:
 			playlist_info = self._get_playlist_info(playlist_id)
@@ -202,7 +203,7 @@ class YoutubeApi(ApiInterface):
 
 		songs: list[ApiSong] = []
 		next_page_token = ''
-		while True:
+		while True and include_songs:
 			response = requests.get(
 				song_page_url + next_page_token, headers=self.HEADERS
 			)
