@@ -1,5 +1,6 @@
 import os
 import base64
+import time
 import requests
 
 from .ApiInterface import (
@@ -109,7 +110,10 @@ class SpotifyApi(ApiInterface):
 	def get_current_user(self) -> ApiSuccess[ApiUser] | ApiError:
 		CURRENT_USER_URL = f'{self.API_BASE_URL}/me'
 
-		current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
+		while True:
+			current_user_response = requests.get(CURRENT_USER_URL, headers=self.HEADERS)
+			if not self._handle_rate_limit(current_user_response):
+				break
 
 		try:
 			data = current_user_response.json()
@@ -136,7 +140,10 @@ class SpotifyApi(ApiInterface):
 		current_page_url = f'{self.API_BASE_URL}/me/playlists'
 		result: list[ApiPlaylist] = []
 		while True:
-			playlist_response = requests.get(current_page_url, headers=self.HEADERS)
+			while True:
+				playlist_response = requests.get(current_page_url, headers=self.HEADERS)
+				if not self._handle_rate_limit(playlist_response):
+					break
 			# Invalid JSON error
 			try:
 				data = playlist_response.json()
@@ -183,7 +190,10 @@ class SpotifyApi(ApiInterface):
 	def _get_playlist_info(self, playlist_id: str) -> ApiPlaylist:
 		request_url = f'{self.API_BASE_URL}/playlists/{playlist_id}'
 
-		playlist_response = requests.get(request_url, headers=self.HEADERS)
+		while True:
+			playlist_response = requests.get(request_url, headers=self.HEADERS)
+			if not self._handle_rate_limit(playlist_response):
+				break
 
 		data = playlist_response.json()
 
@@ -219,10 +229,14 @@ class SpotifyApi(ApiInterface):
 
 		songs = []
 		# get playlist songs
+
 		while True and include_songs:
-			playlist_songs_response = requests.get(
-				current_song_page_url, headers=self.HEADERS
-			)
+			while True:
+				playlist_songs_response = requests.get(
+					current_song_page_url, headers=self.HEADERS
+				)
+				if not self._handle_rate_limit(playlist_songs_response):
+					break
 			# Invalid JSON error
 			try:
 				data = playlist_songs_response.json()
@@ -287,9 +301,12 @@ class SpotifyApi(ApiInterface):
 
 			request_body = {'uris': self._song_id_to_uri(chunk)}
 
-			response = requests.post(
-				request_url, json=request_body, headers=self.HEADERS
-			)
+			while True:
+				response = requests.post(
+					request_url, json=request_body, headers=self.HEADERS
+				)
+				if not self._handle_rate_limit(response):
+					break
 
 			try:
 				data = response.json()
@@ -324,9 +341,12 @@ class SpotifyApi(ApiInterface):
 				'items': [{'uri': uri} for uri in self._song_id_to_uri(chunk)]
 			}
 
-			response = requests.delete(
-				request_url, json=request_body, headers=self.HEADERS
-			)
+			while True:
+				response = requests.delete(
+					request_url, json=request_body, headers=self.HEADERS
+				)
+				if not self._handle_rate_limit(response):
+					break
 
 			try:
 				data = response.json()
@@ -365,7 +385,12 @@ class SpotifyApi(ApiInterface):
 			'public': PLAYLIST_PUBLIC,
 		}
 
-		response = requests.post(request_url, json=request_body, headers=self.HEADERS)
+		while True:
+			response = requests.post(
+				request_url, json=request_body, headers=self.HEADERS
+			)
+			if not self._handle_rate_limit(response):
+				break
 
 		# Json error
 		try:
@@ -415,9 +440,12 @@ class SpotifyApi(ApiInterface):
 			'limit': 10,
 		}
 
-		response = response = requests.get(
-			request_url, params=request_params, headers=self.HEADERS
-		)
+		while True:
+			response = requests.get(
+				request_url, params=request_params, headers=self.HEADERS
+			)
+			if not self._handle_rate_limit(response):
+				break
 
 		try:
 			data = response.json()
@@ -472,3 +500,13 @@ class SpotifyApi(ApiInterface):
 		return ApiSuccess(
 			status_code=200, data=result, message='Successfully retrieved songs'
 		)
+
+	def _handle_rate_limit(self, response: requests.Response) -> bool:
+		if response.status_code == 429:
+			retry_after = int(response.headers.get('Retry-After', '1'))
+			print(
+				f'Rate limited by Spotify API. Retrying after {retry_after} seconds...'
+			)
+			time.sleep(retry_after)
+			return True
+		return False
