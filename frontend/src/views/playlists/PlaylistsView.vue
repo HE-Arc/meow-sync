@@ -34,7 +34,12 @@ async function handleSync(id: number) {
         </div>
 
         <div v-if="isPlaylistsLoading" class="space-y-4">
-            <PlaylistCard v-for="n in 3" :key="n" :isLoading="true" />
+            <PlaylistCard
+                v-for="n in 3"
+                :key="n"
+                :isLoading="true"
+                :isSyncing="false"
+            />
         </div>
 
         <UEmpty

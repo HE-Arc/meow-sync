@@ -90,7 +90,7 @@ export const useUpdatePlaylist = defineMutation(() => {
       });
       return response.data;
     },
-    onSuccess(_, { id }) {
+    onSuccess(data, { id }) {
       toast.add({
         title: "Playlist updated",
         description: "Your playlist has been updated successfully.",
@@ -98,6 +98,16 @@ export const useUpdatePlaylist = defineMutation(() => {
       });
       queryCache.invalidateQueries({ key: ["playlists"], exact: true });
       queryCache.invalidateQueries({ key: ["playlist", id], exact: true });
+      if (data) {
+        queryCache.invalidateQueries({
+          key: ["provider_playlist", data.first_provider],
+          exact: false,
+        });
+        queryCache.invalidateQueries({
+          key: ["provider_playlist", data.second_provider],
+          exact: false,
+        });
+      }
     },
   });
 

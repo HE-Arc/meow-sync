@@ -1,8 +1,14 @@
 <script lang="ts" setup>
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import type { PlaylistWithId } from "@/api/Playlist";
-import { ProvidersInformations } from "@/types/SyncProviders";
-import { usePlaylistProvider } from "@/composables/usePlaylistProvider";
+import {
+    ProvidersInformations,
+    type SyncProvider,
+} from "@/types/SyncProviders";
+import {
+    useFirstPlaylistProvider,
+    useSecondPlaylistProvider,
+} from "@/composables/usePlaylistProvider";
 
 defineEmits<{
     (e: "click", id: number): void;
@@ -17,6 +23,9 @@ const props = defineProps<{
     isSyncing: boolean;
 }>();
 
+const firstP = computed(() => props.playlist?.first_provider || null);
+const secondP = computed(() => props.playlist?.second_provider || null);
+
 const firstProvider = computed(() =>
     props.playlist
         ? ProvidersInformations[props.playlist.first_provider]
@@ -28,27 +37,63 @@ const secondProvider = computed(() =>
         ? ProvidersInformations[props.playlist.second_provider]
         : null,
 );
+const firstPId = computed(() => props.playlist?.first_playlist_id || "");
+const secondPId = computed(() => props.playlist?.second_playlist_id || "");
 
 const {
-    providerPlaylist: firstProviderPlaylist,
-    isProviderPlaylistLoading: isFirstProviderPlaylistLoading,
-} = usePlaylistProvider(
-    props.playlist?.first_provider ?? "spotify",
-    props.playlist?.first_playlist_id ?? "",
-);
+    firstPlaylistProvider,
+    firstPlaylistId,
+    firstProviderPlaylist,
+    isFirstProviderPlaylistLoading,
+} = useFirstPlaylistProvider();
 const {
-    providerPlaylist: secondProviderPlaylist,
-    isProviderPlaylistLoading: isSecondProviderPlaylistLoading,
-} = usePlaylistProvider(
-    props.playlist?.second_provider ?? "spotify",
-    props.playlist?.second_playlist_id ?? "",
-);
+    secondPlaylistProvider,
+    secondPlaylistId,
+    secondProviderPlaylist,
+    isSecondProviderPlaylistLoading,
+} = useSecondPlaylistProvider();
 
 const isLoadingInternal = computed(
     () =>
         props.isLoading ||
         isFirstProviderPlaylistLoading.value ||
         isSecondProviderPlaylistLoading.value,
+);
+
+watch(
+    firstP,
+    (firstP) => {
+        if (firstProvider) {
+            firstPlaylistProvider.value = firstP;
+        }
+    },
+    { immediate: true },
+);
+
+watch(
+    secondP,
+    (secondP) => {
+        if (secondProvider) {
+            secondPlaylistProvider.value = secondP;
+        }
+    },
+    { immediate: true },
+);
+
+watch(
+    firstPId,
+    (firstPId) => {
+        firstPlaylistId.value = firstPId;
+    },
+    { immediate: true },
+);
+
+watch(
+    secondPId,
+    (secondPId) => {
+        secondPlaylistId.value = secondPId;
+    },
+    { immediate: true },
 );
 
 const firstPlaylistName = computed(

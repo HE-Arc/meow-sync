@@ -98,20 +98,23 @@ export const useFirstPlaylistProvider = defineQuery(() => {
   };
 });
 
-export function usePlaylistProvider(
-  provider: SyncProvider,
-  playlistId: string,
-) {
+export const useSecondPlaylistProvider = defineQuery(() => {
+  const provider = ref<SyncProvider | null>(null);
+  const playlistId = ref<string | null>("");
+
   const {
     data: providerPlaylist,
     isPending: isProviderPlaylistLoading,
     ...rest
   } = useQuery({
-    key: () => ["provider_playlist", provider, playlistId],
+    key: () => ["provider_playlist", provider.value, playlistId.value],
+    enabled: () => provider.value !== null && playlistId.value !== null,
     query: async () => {
+      if (!provider.value || !playlistId.value) return null;
+
       const res = await client.GET("/api/{provider}/playlists/{playlist_id}", {
         params: {
-          path: { provider: provider, playlist_id: playlistId },
+          path: { provider: provider.value, playlist_id: playlistId.value },
         },
       });
 
@@ -120,8 +123,10 @@ export function usePlaylistProvider(
   });
 
   return {
-    providerPlaylist: providerPlaylist,
-    isProviderPlaylistLoading: isProviderPlaylistLoading,
+    secondPlaylistProvider: provider,
+    secondPlaylistId: playlistId,
+    secondProviderPlaylist: providerPlaylist,
+    isSecondProviderPlaylistLoading: isProviderPlaylistLoading,
     ...rest,
   };
-}
+});
