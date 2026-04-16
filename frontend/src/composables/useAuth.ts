@@ -56,8 +56,8 @@ export const useGetLoginUrlAndRedirect = defineMutation(() => {
 		},
 		onSuccess(data, provider) {
 			if (!data) return;
-			sessionStorage.setItem(OAUTH_PROVIDER_SESSION_KEY, provider);
-			sessionStorage.setItem(
+			localStorage.setItem(OAUTH_PROVIDER_SESSION_KEY, provider);
+			localStorage.setItem(
 				CURRENT_PATH_SESSION_KEY,
 				router.currentRoute.value.fullPath,
 			);
@@ -81,10 +81,10 @@ export const useHandleCallback = defineMutation(() => {
 			params.code,
 		],
 		mutation: async ({ code, state }: { code: string; state: string }) => {
-			const provider = sessionStorage.getItem(
+			const provider = localStorage.getItem(
 				OAUTH_PROVIDER_SESSION_KEY,
 			) as ProviderEnum;
-			if (!provider) throw new Error("No provider found in session storage");
+			if (!provider) throw new Error("No provider found in local storage");
 			const { data } = await client.GET("/api/oauth/{provider}/callback/", {
 				params: { path: { provider }, query: { code, state } },
 			});
@@ -94,9 +94,9 @@ export const useHandleCallback = defineMutation(() => {
 		onSuccess(data) {
 			if (!data) return;
 			token.setToken(data.auth_token);
-			sessionStorage.removeItem(OAUTH_PROVIDER_SESSION_KEY);
-			const currentPath = sessionStorage.getItem(CURRENT_PATH_SESSION_KEY);
-			sessionStorage.removeItem(CURRENT_PATH_SESSION_KEY);
+			localStorage.removeItem(OAUTH_PROVIDER_SESSION_KEY);
+			const currentPath = localStorage.getItem(CURRENT_PATH_SESSION_KEY);
+			localStorage.removeItem(CURRENT_PATH_SESSION_KEY);
 			router.push(currentPath || "/playlists");
 		},
 	});

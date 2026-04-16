@@ -1,4 +1,3 @@
-import type { SelectItem } from "@nuxt/ui";
 import { useToast } from "@nuxt/ui/runtime/composables/useToast.js";
 import {
 	defineMutation,
@@ -11,7 +10,6 @@ import { ref } from "vue";
 import type { Playlist as ApiPlaylist } from "@/api/client";
 import { client } from "@/api/client";
 import type { Playlist } from "@/api/Playlist";
-import type { SyncProvider } from "@/types/SyncProviders";
 
 export const usePlaylists = defineQuery(() => {
 	const {
@@ -54,69 +52,6 @@ export const usePlaylist = defineQuery(() => {
 	return { playlistId: id, playlist, isPlaylistLoading, ...rest };
 });
 
-export const useFirstProviderPlaylists = defineQuery(() => {
-	const provider = ref<SyncProvider | null>(null);
-
-	const { data: providerPlaylists, isPending: isProviderPlaylistsLoading } =
-		useQuery({
-			key: () => ["provider_playlists", provider.value],
-			query: async () => {
-				if (!provider.value) return [];
-
-				//TODO: Replace with actual API call to fetch playlists for the selected provider
-
-				await new Promise((resolve) =>
-					setTimeout(resolve, Math.random() * 2000 + 500),
-				);
-
-				// Mock data for demonstration purposes
-				return [
-					{
-						label: `${provider.value} Playlist 1`,
-						value: "12345",
-					},
-				] as SelectItem[];
-			},
-		});
-
-	return {
-		firstProvider: provider,
-		firstProviderPlaylists: providerPlaylists,
-		isFirstProviderPlaylistsLoading: isProviderPlaylistsLoading,
-	};
-});
-
-export const useSecondProviderPlaylists = defineQuery(() => {
-	const provider = ref<SyncProvider | null>(null);
-
-	const { data: providerPlaylists, isPending: isProviderPlaylistsLoading } =
-		useQuery({
-			key: () => ["provider_playlists", provider.value],
-			query: async () => {
-				if (!provider.value) return [];
-
-				//TODO: Replace with actual API call to fetch playlists for the selected provider
-				await new Promise((resolve) =>
-					setTimeout(resolve, Math.random() * 2000 + 500),
-				);
-
-				// Mock data for demonstration purposes
-				return [
-					{
-						label: `${provider.value} Playlist A`,
-						value: "12345",
-					},
-				] as SelectItem[];
-			},
-		});
-
-	return {
-		secondProvider: provider,
-		secondProviderPlaylists: providerPlaylists,
-		isSecondProviderPlaylistsLoading: isProviderPlaylistsLoading,
-	};
-});
-
 export const createPlaylist = defineMutation(() => {
 	const toast = useToast();
 	const queryCache = useQueryCache();
@@ -155,7 +90,7 @@ export const useUpdatePlaylist = defineMutation(() => {
 			});
 			return response.data;
 		},
-		onSuccess(_, { id }) {
+		onSuccess(data, { id }) {
 			toast.add({
 				title: "Playlist updated",
 				description: "Your playlist has been updated successfully.",
@@ -163,6 +98,16 @@ export const useUpdatePlaylist = defineMutation(() => {
 			});
 			queryCache.invalidateQueries({ key: ["playlists"], exact: true });
 			queryCache.invalidateQueries({ key: ["playlist", id], exact: true });
+			if (data) {
+				queryCache.invalidateQueries({
+					key: ["provider_playlist", data.first_provider],
+					exact: false,
+				});
+				queryCache.invalidateQueries({
+					key: ["provider_playlist", data.second_provider],
+					exact: false,
+				});
+			}
 		},
 	});
 

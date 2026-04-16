@@ -5,11 +5,13 @@ import { useRoute, useRouter } from "vue-router";
 import { PlaylistSchema, type PlaylistWithId } from "@/api/Playlist";
 import {
     createPlaylist,
-    useFirstProviderPlaylists,
     usePlaylist,
-    useSecondProviderPlaylists,
     useUpdatePlaylist,
 } from "@/composables/usePlaylist";
+import {
+    useFirstProviderPlaylists,
+    useSecondProviderPlaylists,
+} from "@/composables/usePlaylistProvider";
 import {
     ProvidersInformations,
     type SyncProvider,
@@ -40,7 +42,6 @@ const providers = SyncProviders.map((p) => ({
     icon: ProvidersInformations[p].icon,
 }));
 
-// Provider playlist selection (not yet implemented in backend)
 const {
     firstProvider,
     firstProviderPlaylists,
@@ -52,7 +53,6 @@ const {
     isSecondProviderPlaylistsLoading,
 } = useSecondProviderPlaylists();
 
-// Load existing data in edit mode
 const {
     playlistId: playlistQueryId,
     playlist,
@@ -78,27 +78,21 @@ onMounted(() => {
     if (props.isEditMode && state.value.id) {
         playlistQueryId.value = state.value.id;
     }
+    firstProvider.value = state.value.first_provider;
+    secondProvider.value = state.value.second_provider;
 });
 
-watch(
-    first_selected_provider,
-    (newProvider) => {
-        // Clear the selected playlist when the provider changes
-        state.value.first_playlist_id = "";
-        firstProvider.value = newProvider;
-    },
-    { immediate: true },
-);
+watch(first_selected_provider, (newProvider) => {
+    // Clear the selected playlist when the provider changes
+    state.value.first_playlist_id = "";
+    firstProvider.value = newProvider;
+});
 
-watch(
-    second_selected_provider,
-    (newProvider) => {
-        // Clear the selected playlist when the provider changes
-        state.value.second_playlist_id = "";
-        secondProvider.value = newProvider;
-    },
-    { immediate: true },
-);
+watch(second_selected_provider, (newProvider) => {
+    // Clear the selected playlist when the provider changes
+    state.value.second_playlist_id = "";
+    secondProvider.value = newProvider;
+});
 
 // Mutations
 const { mutateAsync: create, asyncStatus: createStatus } = createPlaylist();
@@ -118,8 +112,8 @@ const isSubmitting = computed(
 );
 
 async function submit(_event: FormSubmitEvent<PlaylistWithId>) {
-    if (props.isEditMode && state.value.id) {
-        await update({ id: state.value.id, data: state.value });
+    if (props.isEditMode) {
+        await update({ id: playlistQueryId.value, data: state.value });
     } else {
         await create(state.value);
     }
