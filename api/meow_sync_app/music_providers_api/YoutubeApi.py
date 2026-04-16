@@ -257,7 +257,7 @@ class YoutubeApi(ApiInterface):
 
 		result.songs = songs
 
-		return ApiSuccess(status_code=response.status_code, data=result)
+		return ApiSuccess(status_code=200, data=result)
 
 	def add_to_playlist(
 		self, playlist_id: str, song_ids: list[str]
