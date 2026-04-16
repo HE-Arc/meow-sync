@@ -2,13 +2,13 @@
 import { computed, watch } from "vue";
 import type { PlaylistWithId } from "@/api/Playlist";
 import {
-    ProvidersInformations,
-    type SyncProvider,
-} from "@/types/SyncProviders";
-import {
     useFirstPlaylistProvider,
     useSecondPlaylistProvider,
 } from "@/composables/usePlaylistProvider";
+import {
+    ProvidersInformations,
+    type SyncProvider,
+} from "@/types/SyncProviders";
 
 defineEmits<{
     (e: "click", id: number): void;
