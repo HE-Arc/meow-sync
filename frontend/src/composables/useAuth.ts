@@ -28,13 +28,13 @@ export const useApiToken = defineStore("apiToken", () => {
 
 	const setToken = (newToken: string | null) => {
 		token.value = newToken;
-		// We have new token invalidate all queries
-		queryCache.invalidateQueries();
 		if (newToken) {
 			localStorage.setItem(TOKEN_LOCAL_STORAGE_KEY, newToken);
 		} else {
 			localStorage.removeItem(TOKEN_LOCAL_STORAGE_KEY);
 		}
+		// We have new token invalidate all queries
+		queryCache.invalidateQueries();
 	};
 
 	return {
