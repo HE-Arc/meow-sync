@@ -18,12 +18,25 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-
-from user_playlist.views import UserPlaylistViewSet
+from meow_sync_app.views import (
+	OAuthCallbackView,
+	OAuthDisconnectView,
+	OAuthLoginView,
+	CommentViewSet,
+	MeView,
+	PlaylistSynchronizationViewSet,
+	SearchView,
+	SongIdTranslationViewSet,
+	ProviderPlaylistView,
+	ProviderSinglePlaylistView,
+	SyncPlaylist,
+)
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 router = DefaultRouter()
-router.register(r'playlists', UserPlaylistViewSet, basename='playlist')
+router.register(r'comments', CommentViewSet, basename='comment')
+router.register(r'playlists', PlaylistSynchronizationViewSet, basename='playlist')
+router.register(r'songs', SongIdTranslationViewSet, basename='song')
 
 urlpatterns = [
 	path('admin/', admin.site.urls),
@@ -32,6 +45,37 @@ urlpatterns = [
 		'api/swagger/',
 		SpectacularSwaggerView.as_view(url_name='schema'),
 		name='swagger-ui',
+	),
+	# TODO: move to main app
+	path(
+		'api/oauth/<str:provider>/login/', OAuthLoginView.as_view(), name='oauth-login'
+	),
+	path(
+		'api/oauth/<str:provider>/callback/',
+		OAuthCallbackView.as_view(),
+		name='oauth-callback',
+	),
+	path(
+		'api/oauth/<str:provider>/disconnect/',
+		OAuthDisconnectView.as_view(),
+		name='oauth-disconnect',
+	),
+	path('api/users/me/', MeView.as_view(), name='users-me'),
+	path('api/<str:provider>/search/', SearchView.as_view(), name='provider-search'),
+	path(
+		'api/<str:provider>/playlists/',
+		ProviderPlaylistView.as_view(),
+		name='provider-playlists',
+	),
+	path(
+		'api/<str:provider>/playlists/<str:playlist_id>',
+		ProviderSinglePlaylistView.as_view(),
+		name='provider-single-playlist',
+	),
+	path(
+		'api/playlists-sync/<str:playlist_sync_id>',
+		SyncPlaylist.as_view(),
+		name='provider-single-playlist',
 	),
 	path('api/', include(router.urls)),
 ]

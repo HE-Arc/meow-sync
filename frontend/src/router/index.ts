@@ -1,14 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useApiToken } from "@/composables/useAuth";
 import LoginCallback from "@/views/LoginCallback.vue";
 import NewPlaylistView from "@/views/playlists/NewPlaylistView.vue";
 import PlaylistDetailsView from "@/views/playlists/PlaylistDetailsView.vue";
 import PlaylistsView from "@/views/playlists/PlaylistsView.vue";
 import HomeView from "../views/HomeView.vue";
-
-function _isAuthenticated(): boolean {
-	const token = localStorage.getItem("token");
-	return !!token;
-}
 
 const router = createRouter({
 	history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,14 +22,8 @@ const router = createRouter({
 		{
 			path: "/playlists",
 			name: "playlists",
-			/*beforeEnter: (_to, _from, next) => {
-				if (!isAuthenticated()) {
-					next({ name: "home" });
-				} else {
-					next();
-				}
-			},*/ // TODO: Re-enable this when the backend is ready to accept the token
 			props: true,
+			meta: { requiresAuth: true },
 			children: [
 				{
 					path: "view",
@@ -61,14 +51,45 @@ const router = createRouter({
 			],
 		},
 		{
+			path: "/settings",
+			name: "settings",
+			meta: { requiresAuth: true },
+			component: () => import("../views/SettingsView.vue"),
+		},
+		{
 			path: "/about",
 			name: "about",
-			// route level code-splitting
-			// this generates a separate chunk (About.[hash].js) for this route
-			// which is lazy-loaded when the route is visited.
 			component: () => import("../views/AboutView.vue"),
 		},
+		{
+			path: "/403",
+			name: "forbidden",
+			component: () => import("../views/ErrorView.vue"),
+			props: { errorCode: 403, errorMessage: "Forbidden" },
+		},
+		{
+			path: "/404",
+			name: "not_found",
+			component: () => import("../views/ErrorView.vue"),
+			props: { errorCode: 404, errorMessage: "Page Not Found" },
+		},
+		{
+			path: "/:catchAll(.*)",
+			redirect: "/404",
+		},
 	],
+});
+
+router.beforeEach(async (to, _from, next) => {
+	const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+	if (requiresAuth) {
+		const { isAuthenticated } = useApiToken();
+		if (!isAuthenticated) {
+			next("/");
+			return;
+		}
+	}
+	next();
 });
 
 export default router;

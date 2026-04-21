@@ -57,8 +57,8 @@ INSTALLED_APPS = [
 	'rest_framework.authtoken',  # for JWT auth
 	'drf_spectacular',
 	'meow_sync_app',
-	'user_playlist',
 	'corsheaders',
+	'drf_standardized_errors',
 	'django.contrib.admin',
 	'django.contrib.auth',
 	'django.contrib.contenttypes',
@@ -151,11 +151,32 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'static'
 
 REST_FRAMEWORK = {
-	'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+	'EXCEPTION_HANDLER': 'drf_standardized_errors.handler.exception_handler',
+	'DEFAULT_SCHEMA_CLASS': 'drf_standardized_errors.openapi.AutoSchema',
+	'DEFAULT_AUTHENTICATION_CLASSES': [
+		'rest_framework.authentication.TokenAuthentication',
+		'rest_framework.authentication.SessionAuthentication',
+	],
 }
 
 SPECTACULAR_SETTINGS = {
 	'TITLE': 'Meow Sync API',
 	'DESCRIPTION': 'API for synchronizing playlists across music providers.',
 	'VERSION': '1.0.0',
+	'ENUM_NAME_OVERRIDES': {
+		'ValidationErrorEnum': 'drf_standardized_errors.openapi_serializers.ValidationErrorEnum.choices',
+		'ClientErrorEnum': 'drf_standardized_errors.openapi_serializers.ClientErrorEnum.choices',
+		'ServerErrorEnum': 'drf_standardized_errors.openapi_serializers.ServerErrorEnum.choices',
+		'ErrorCode401Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode401Enum.choices',
+		'ErrorCode403Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode403Enum.choices',
+		'ErrorCode404Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode404Enum.choices',
+		'ErrorCode405Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode405Enum.choices',
+		'ErrorCode406Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode406Enum.choices',
+		'ErrorCode415Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode415Enum.choices',
+		'ErrorCode429Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode429Enum.choices',
+		'ErrorCode500Enum': 'drf_standardized_errors.openapi_serializers.ErrorCode500Enum.choices',
+	},
+	'POSTPROCESSING_HOOKS': [
+		'drf_standardized_errors.openapi_hooks.postprocess_schema_enums'
+	],
 }

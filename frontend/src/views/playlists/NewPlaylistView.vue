@@ -1,245 +1,279 @@
 <script lang="ts" setup>
 import type { FormSubmitEvent } from "@nuxt/ui";
-import { useToast } from "@nuxt/ui/runtime/composables/useToast.js";
-import { type Ref, ref } from "vue";
+import { computed, onMounted, type Ref, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import * as z from "zod";
+import { PlaylistSchema, type PlaylistWithId } from "@/api/Playlist";
 import {
-  createPlaylist,
-  getPlaylistById,
-  getPlaylists,
-  type Playlist,
-  PlaylistSchema,
-  updatePlaylist,
-} from "@/api/Playlist";
-import { SyncProviders } from "@/types/SyncProviders";
+    createPlaylist,
+    usePlaylist,
+    useUpdatePlaylist,
+} from "@/composables/usePlaylist";
+import {
+    useFirstProviderPlaylists,
+    useSecondProviderPlaylists,
+} from "@/composables/usePlaylistProvider";
+import { useUserInfo } from "@/composables/useUserInfo";
+import {
+    ProvidersInformations,
+    type SyncProvider,
+    SyncProviders,
+} from "@/types/SyncProviders";
 
 const props = defineProps<{
-  isEditMode?: boolean;
+    isEditMode?: boolean;
 }>();
 
 const route = useRoute();
-const playlistId = route.params.id as number | undefined;
-
-const schema = z.object({
-  playlist_id: z
-    .string("Playlist ID must be a string")
-    .min(3, "Playlist ID cannot be less than 3 characters"),
-  provider: z.enum(
-    SyncProviders,
-    "Provider must be either 'spotify' or 'youtube'",
-  ),
-  author: z
-    .string("Author must be a string")
-    .min(3, "Author name cannot be less than 3 characters"),
-  user: z.number("User ID must be a number"), //TODO: Remove this when login works
-  title: z
-    .string("Title must be a string")
-    .min(3, "Title cannot be less than 3 characters"),
-  description: z.string("Description must be a string").nullable(),
-
-  img_url: z.url("Image URL must be a valid URL").nullable(),
-});
-
-type PlaylistForm = z.infer<typeof schema>;
-
-const isLoading = ref(true);
-const toast = useToast();
 const router = useRouter();
 
-const state: Ref<PlaylistForm> = ref({
-  playlist_id: "",
-  provider: "spotify",
-  title: "",
-  description: null,
-  author: "",
-  user: 1,
-  img_url: null,
-} as PlaylistForm);
+const state: Ref<PlaylistWithId> = ref({
+    id: route.params.id ? Number(route.params.id) : undefined,
+    first_provider: "spotify",
+    first_playlist_id: "",
+    second_provider: "youtube",
+    second_playlist_id: "",
+});
 
-const providers = ref(
-  SyncProviders.map((provider) => ({
-    label: provider.charAt(0).toUpperCase() + provider.slice(1),
-    value: provider,
-  })),
+const first_selected_provider = computed(() => state.value.first_provider);
+const second_selected_provider = computed(() => state.value.second_provider);
+
+const {user, isUserLoading} = useUserInfo();
+
+const providers = computed(() => {
+    if(isUserLoading.value) {
+        return [];
+    }
+    const userProviders = user.value?.connections.map((conn) => conn.provider) || [];
+    if(userProviders.length < 2) {
+        const first = userProviders[0] || "spotify";
+        firstProvider.value = first;
+        secondProvider.value = first;
+    }
+    return SyncProviders.filter((provider) =>
+        userProviders.includes(provider),
+    ).map((provider) => ({
+        value: provider,
+        label: ProvidersInformations[provider].name,
+        icon: ProvidersInformations[provider].icon,
+    }));
+});
+
+const {
+    firstProvider,
+    firstProviderPlaylists,
+    isFirstProviderPlaylistsLoading,
+} = useFirstProviderPlaylists();
+const {
+    secondProvider,
+    secondProviderPlaylists,
+    isSecondProviderPlaylistsLoading,
+} = useSecondProviderPlaylists();
+
+const {
+    playlistId: playlistQueryId,
+    playlist,
+    isPlaylistLoading,
+} = usePlaylist();
+
+watch(
+    playlist,
+    (data) => {
+        if (data && props.isEditMode) {
+            state.value = {
+                first_provider: data.first_provider,
+                first_playlist_id: data.first_playlist_id,
+                second_provider: data.second_provider,
+                second_playlist_id: data.second_playlist_id,
+            };
+        }
+    },
+    { immediate: true },
 );
 
-async function loadPlaylist() {
-  if (props.isEditMode && playlistId) {
-    try {
-      const data = await getPlaylistById(playlistId);
-      state.value = data;
-    } catch (error) {
-      console.error("Failed to load playlist:", error);
+onMounted(() => {
+    if (props.isEditMode && state.value.id) {
+        playlistQueryId.value = state.value.id;
     }
-  }
-  isLoading.value = false;
-}
+    firstProvider.value = state.value.first_provider;
+    secondProvider.value = state.value.second_provider;
+});
 
-async function submit(_event: FormSubmitEvent<PlaylistForm>) {
-  try {
-    if (props.isEditMode && playlistId) {
-      await updatePlaylist(playlistId, state.value as Playlist);
+watch(first_selected_provider, (newProvider) => {
+    // Clear the selected playlist when the provider changes
+    state.value.first_playlist_id = "";
+    firstProvider.value = newProvider;
+});
+
+watch(second_selected_provider, (newProvider) => {
+    // Clear the selected playlist when the provider changes
+    state.value.second_playlist_id = "";
+    secondProvider.value = newProvider;
+});
+
+// Mutations
+const { mutateAsync: create, asyncStatus: createStatus } = createPlaylist();
+const { mutateAsync: update, asyncStatus: updateStatus } = useUpdatePlaylist();
+
+// Computed values
+const isLoading = computed(
+    () =>
+        (props.isEditMode && (isPlaylistLoading.value || isUserLoading.value)) ||
+        (!props.isEditMode &&
+            (isFirstProviderPlaylistsLoading.value ||
+            isSecondProviderPlaylistsLoading.value || isUserLoading.value)),
+);
+
+const isSubmitting = computed(
+    () => createStatus.value === "loading" || updateStatus.value === "loading",
+);
+
+async function submit(_event: FormSubmitEvent<PlaylistWithId>) {
+    if (props.isEditMode) {
+        await update({ id: playlistQueryId.value, data: state.value });
     } else {
-      await createPlaylist(state.value as Playlist);
+        await create(state.value);
     }
-
-    toast?.add({
-      title: props.isEditMode
-        ? "Playlist updated successfully"
-        : "Playlist created successfully",
-      color: "green",
-    });
-
     router.push("/playlists");
-  } catch (error) {
-    console.error("Failed to submit playlist:", error);
-    toast?.add({
-      title: "Error",
-      description: "Failed to save playlist",
-      color: "red",
-    });
-  }
 }
-
-loadPlaylist();
 </script>
 
 <template>
-  <template v-if="isLoading">
-    <div
-      class="flex items-center justify-center min-h-screen bg-white dark:bg-slate-950"
-    >
-      <p class="text-lg text-gray-500 dark:text-gray-400">Loading...</p>
+    <div v-if="isLoading" class="flex items-center justify-center">
+        <span class="animate-spin">
+            <UIcon name="lucide:loader-2" class="text-xl" />
+        </span>
+        <p>Loading...</p>
     </div>
-  </template>
-  <div
-    v-else
-    class="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-12 px-4"
-  >
-    <div class="max-w-md mx-auto">
-      <div
-        class="bg-white dark:bg-slate-900 rounded-lg shadow-lg dark:shadow-xl p-8"
-      >
-        <h1
-          class="text-3xl font-bold mb-2 text-slate-900 dark:text-slate-50 text-center"
-        >
-          {{ props.isEditMode ? "Edit Playlist" : "Create New Playlist" }}
-        </h1>
-        <p class="text-slate-500 dark:text-slate-400 mb-8 text-center">
-          {{
-            props.isEditMode
-              ? "Update your playlist details"
-              : "Add a new playlist to your collection"
-          }}
+    <div v-else-if="providers.length < 2" class="flex items-center justify-center flex-col">
+        <p class="text-slate-500 dark:text-slate-400 mb-4">
+            You need to connect at least two music provider to create a sync pair
         </p>
-
-        <UForm
-          :schema="schema"
-          :state="state"
-          @submit="submit"
-          class="grid grid-cols-1 md:grid-cols-2 gap-6"
+        <UButton
+            color="primary"
+            @click="router.push('/settings')"
         >
-          <UFormField
-            label="Playlist ID"
-            name="playlist_id"
-            class="space-y-2 md:col-span-2"
-          >
-            <UInput
-              v-model="state.playlist_id"
-              :disabled="props.isEditMode"
-              placeholder="Enter playlist ID"
-              size="lg"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Title"
-            name="title"
-            class="space-y-2 md:col-span-2"
-          >
-            <UInput
-              v-model="state.title"
-              placeholder="Enter playlist title"
-              size="lg"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField label="Author" name="author" class="space-y-2">
-            <UInput
-              v-model="state.author"
-              placeholder="Enter author name"
-              size="lg"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField label="User ID" name="user" class="space-y-2">
-            <UInput
-              v-model="state.user"
-              type="number"
-              placeholder="Enter user ID"
-              size="lg"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Description"
-            name="description"
-            class="space-y-2 md:col-span-2"
-          >
-            <UTextarea
-              :model-value="state.description ?? ''"
-              @update:model-value="state.description = $event || null"
-              placeholder="Enter playlist description"
-              class="w-full"
-              :rows="4"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Provider"
-            name="provider"
-            class="space-y-2 md:col-span-2"
-          >
-            <USelect
-              v-model="state.provider"
-              :items="providers"
-              placeholder="Select a provider"
-              size="lg"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Image URL"
-            name="img_url"
-            class="space-y-2 md:col-span-2"
-          >
-            <UInput
-              :model-value="state.img_url ?? ''"
-              @update:model-value="state.img_url = $event || null"
-              placeholder="https://example.com/image.jpg"
-              size="lg"
-              class="w-full"
-            />
-          </UFormField>
-
-          <div class="md:col-span-2 flex gap-3 pt-2">
-            <UButton
-              type="submit"
-              color="primary"
-              size="lg"
-              class="flex-1 justify-center"
-            >
-              {{ props.isEditMode ? "Update Playlist" : "Create Playlist" }}
-            </UButton>
-          </div>
-        </UForm>
-      </div>
+            Connect Provider
+        </UButton>
     </div>
-  </div>
+    <div v-else>
+        <div class="max-w-lg mx-auto">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-lg shadow-lg dark:shadow-xl p-8"
+            >
+                <h1
+                    class="text-3xl font-bold mb-2 text-slate-900 dark:text-slate-50 text-center"
+                >
+                    {{
+                        props.isEditMode ? "Edit Sync Pair" : "Create Sync Pair"
+                    }}
+                </h1>
+                <p class="text-slate-500 dark:text-slate-400 mb-8 text-center">
+                    {{
+                        props.isEditMode
+                            ? "Update the playlists to synchronize"
+                            : "Choose two playlists to keep in sync"
+                    }}
+                </p>
+
+                <UForm
+                    :schema="PlaylistSchema"
+                    :state="state"
+                    @submit="submit"
+                    class="space-y-6"
+                >
+                    <!-- First provider -->
+                    <div
+                        class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-4"
+                    >
+                        <p
+                            class="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide"
+                        >
+                            First Playlist
+                        </p>
+
+                        <UFormField label="Provider" name="first_provider">
+                            <USelect
+                                v-model="state.first_provider"
+                                :items="providers"
+                                size="lg"
+                                class="w-full"
+                            />
+                        </UFormField>
+
+                        <UFormField label="Playlist" name="first_playlist_id">
+                            <USelect
+                                v-model="state.first_playlist_id"
+                                :items="firstProviderPlaylists"
+                                size="lg"
+                                class="w-full"
+                                :loading="isFirstProviderPlaylistsLoading"
+                                :disabled="isFirstProviderPlaylistsLoading"
+                            />
+                        </UFormField>
+                    </div>
+
+                    <!-- Sync arrow divider -->
+                    <div class="flex items-center justify-center">
+                        <UIcon
+                            name="lucide:arrow-down-up"
+                            class="text-2xl text-slate-400"
+                        />
+                    </div>
+
+                    <!-- Second provider -->
+                    <div
+                        class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-4"
+                    >
+                        <p
+                            class="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide"
+                        >
+                            Second Playlist
+                        </p>
+
+                        <UFormField label="Provider" name="second_provider">
+                            <USelect
+                                v-model="state.second_provider"
+                                :items="providers"
+                                size="lg"
+                                class="w-full"
+                            />
+                        </UFormField>
+
+                        <UFormField label="Playlist" name="second_playlist_id">
+                            <USelect
+                                v-model="state.second_playlist_id"
+                                :items="secondProviderPlaylists"
+                                size="lg"
+                                class="w-full"
+                                :loading="isSecondProviderPlaylistsLoading"
+                                :disabled="isSecondProviderPlaylistsLoading"
+                            />
+                        </UFormField>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <UButton
+                            type="button"
+                            color="neutral"
+                            variant="outline"
+                            size="lg"
+                            class="flex-1 justify-center"
+                            @click="router.push('/playlists')"
+                        >
+                            Cancel
+                        </UButton>
+                        <UButton
+                            type="submit"
+                            color="primary"
+                            size="lg"
+                            class="flex-1 justify-center"
+                            :loading="isSubmitting || isLoading"
+                        >
+                            {{ props.isEditMode ? "Update" : "Create" }}
+                        </UButton>
+                    </div>
+                </UForm>
+            </div>
+        </div>
+    </div>
 </template>
