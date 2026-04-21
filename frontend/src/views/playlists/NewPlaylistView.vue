@@ -12,12 +12,12 @@ import {
     useFirstProviderPlaylists,
     useSecondProviderPlaylists,
 } from "@/composables/usePlaylistProvider";
+import { useUserInfo } from "@/composables/useUserInfo";
 import {
     ProvidersInformations,
     type SyncProvider,
     SyncProviders,
 } from "@/types/SyncProviders";
-import { useUserInfo } from "@/composables/useUserInfo";
 
 const props = defineProps<{
     isEditMode?: boolean;

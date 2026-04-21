@@ -12,8 +12,7 @@ export const useUserInfo = defineQuery(() => {
 	} = useQuery({
 		key: () => ["userInfo"],
 		query: async () => {
-			if(!tokenStore.isAuthenticated)
-				return;
+			if (!tokenStore.isAuthenticated) return;
 			const response = await client.GET("/api/users/me/");
 			return response.data;
 		},
