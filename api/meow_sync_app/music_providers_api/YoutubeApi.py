@@ -257,7 +257,7 @@ class YoutubeApi(ApiInterface):
 
 		result.songs = songs
 
-		return ApiSuccess(status_code=200, data=result)
+		return ApiSuccess(status_code=playlist_info.status_code, data=result)
 
 	def add_to_playlist(
 		self, playlist_id: str, song_ids: list[str]
@@ -396,7 +396,6 @@ class YoutubeApi(ApiInterface):
 
 		try:
 			data = response.json()
-			print(f'Search response data: {data}')
 		except Exception as e:
 			print(f'Error parsing Youtube search query response JSON: {e}')
 			return ApiError(
@@ -429,7 +428,6 @@ class YoutubeApi(ApiInterface):
 						duration_ms=-1,
 					)
 				)
-			print(f'Parsed search results: {len(result)} songs')
 		except Exception as e:
 			return ApiError(
 				status_code=500,

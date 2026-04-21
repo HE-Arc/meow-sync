@@ -61,8 +61,8 @@ class SongIdTranslation(AbstractBaseModel):
 		null=True,
 	)
 
-	spotify_id = models.CharField(max_length=255, blank=True, null=True)
-	youtube_id = models.CharField(max_length=255, blank=True, null=True)
+	spotify_id = models.CharField(max_length=512, blank=True, null=True)
+	youtube_id = models.CharField(max_length=512, blank=True, null=True)
 
 	class Meta(AbstractBaseModel.Meta):
 		unique_together = [
