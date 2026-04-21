@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+	dependencies = [
+		('meow_sync_app', '0005_alter_oauthconnection_extra_data'),
+	]
 
-    dependencies = [
-        ('meow_sync_app', '0005_alter_oauthconnection_extra_data'),
-    ]
-
-    operations = [
-        migrations.AlterField(
-            model_name='songidtranslation',
-            name='spotify_id',
-            field=models.CharField(blank=True, max_length=512, null=True),
-        ),
-        migrations.AlterField(
-            model_name='songidtranslation',
-            name='youtube_id',
-            field=models.CharField(blank=True, max_length=512, null=True),
-        ),
-    ]
+	operations = [
+		migrations.AlterField(
+			model_name='songidtranslation',
+			name='spotify_id',
+			field=models.CharField(blank=True, max_length=512, null=True),
+		),
+		migrations.AlterField(
+			model_name='songidtranslation',
+			name='youtube_id',
+			field=models.CharField(blank=True, max_length=512, null=True),
+		),
+	]
