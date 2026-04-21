@@ -640,7 +640,8 @@ class SyncPlaylist(APIView):
 	def post(self, request, playlist_sync_id: int):
 		current_user = request.user
 
-		inverse = request.POST.get('inverse') or False
+		inverse = True if request.GET.get('inverse') == 'true' else False
+		print('INVERSE: ', inverse)
 
 		try:
 			playlist_sync: PlaylistSynchronization = (
@@ -695,7 +696,7 @@ class SyncPlaylist(APIView):
 
 		# get songs for first provider
 		playlist_response_1 = provider_class_instance_1.get_playlist(
-			playlist_sync.first_playlist_id
+			playlist_sync.first_playlist_id, include_songs=True
 		)
 		if not playlist_response_1.success:
 			return Response(
@@ -708,7 +709,7 @@ class SyncPlaylist(APIView):
 
 		# get songs for second provider
 		playlist_response_2 = provider_class_instance_2.get_playlist(
-			playlist_sync.second_playlist_id
+			playlist_sync.second_playlist_id, include_songs=True
 		)
 		if not playlist_response_2.success:
 			return Response(
@@ -730,7 +731,9 @@ class SyncPlaylist(APIView):
 				cached_translation = SongIdTranslation.objects.filter(
 					spotify_id=song_o.id
 				).first()
+				print('CACHED LOOKUP SPOTIFY ', cached_translation)
 			elif playlist_sync.first_provider == 'youtube':
+				print('CACHED LOOKUP YOUTUBE ', cached_translation)
 				cached_translation = SongIdTranslation.objects.filter(
 					youtube_id=song_o.id
 				).first()
@@ -738,6 +741,7 @@ class SyncPlaylist(APIView):
 				raise Exception('provider not implemented')
 
 			if cached_translation:
+				print('CACHED FOUND !!')
 				# do not add same song twice
 				if (
 					cached_translation.spotify_id in songs_target_ids
@@ -774,6 +778,7 @@ class SyncPlaylist(APIView):
 
 				continue
 			else:
+				print('no cache found, searching via API')
 				# search on provider and update cache
 				search_response = provider_class_instance_2.search_song(
 					ApiSearchQuery(artist_name=song_o.artist, song_title=song_o.title)
@@ -805,6 +810,8 @@ class SyncPlaylist(APIView):
 					if playlist_sync.first_provider == 'youtube'
 					else search_result.id,
 				)
+				print('caching transition: ', cached_translation)
+				cached_translation.save()
 
 				songs_translated.append(search_result)
 
