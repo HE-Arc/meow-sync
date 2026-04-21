@@ -98,6 +98,13 @@ MUSICNAME_PARAMETER = OpenApiParameter(
 	required=True,
 	description='Search music name for YouTube videos.',
 )
+INVERSE_PARAMETER = OpenApiParameter(
+	name='inverse',
+	type=bool,
+	location=OpenApiParameter.QUERY,
+	required=False,
+	description='Inverse sync order (from second provider to first)',
+)
 
 
 def _ensure_access_token_valid(oauth_connection: OAuthConnection) -> bool:
@@ -620,21 +627,20 @@ class ProviderSinglePlaylistView(APIView):
 	tags=['provider'],
 	summary='Sync playlists',
 	description='Interact with provider playlists',
-	parameters=[PLAYLIST_SYNC_ID_PARAMETER],
+	parameters=[PLAYLIST_SYNC_ID_PARAMETER, INVERSE_PARAMETER],
 	responses={
 		200: SyncPlaylistResponseSerializer,
 		400: OAuthMessageSerializer,
 		401: OAuthMessageSerializer,
 	},
 )
-
 class SyncPlaylist(APIView):
 	permission_classes = [IsAuthenticated]
 
 	def post(self, request, playlist_sync_id: int):
 		current_user = request.user
 
-		# TODO: implement query param for reverse
+		inverse = request.POST.get('inverse') or False
 
 		try:
 			playlist_sync: PlaylistSynchronization = (
@@ -648,6 +654,17 @@ class SyncPlaylist(APIView):
 					'message': f'No playlist synchronization found with id {playlist_sync_id} for current user.'
 				},
 				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		if inverse:
+			playlist_sync.pk = None  # prevent saving
+			playlist_sync.first_provider, playlist_sync.second_provider = (
+				playlist_sync.second_provider,
+				playlist_sync.first_provider,
+			)
+			playlist_sync.first_playlist_id, playlist_sync.second_playlist_id = (
+				playlist_sync.second_playlist_id,
+				playlist_sync.first_playlist_id,
 			)
 
 		try:
@@ -710,71 +727,86 @@ class SyncPlaylist(APIView):
 			# check cache
 			cached_translation = None
 			if playlist_sync.first_provider == 'spotify':
-				cached_translation = SongIdTranslation.objects.filter(spotify_id=song_o.id).first()
+				cached_translation = SongIdTranslation.objects.filter(
+					spotify_id=song_o.id
+				).first()
 			elif playlist_sync.first_provider == 'youtube':
-				cached_translation = SongIdTranslation.objects.filter(youtube_id=song_o.id).first()
+				cached_translation = SongIdTranslation.objects.filter(
+					youtube_id=song_o.id
+				).first()
 			else:
 				raise Exception('provider not implemented')
-			
+
 			if cached_translation:
 				# do not add same song twice
-				if cached_translation.spotify_id in songs_target_ids or cached_translation.youtube_id in songs_target_ids:
+				if (
+					cached_translation.spotify_id in songs_target_ids
+					or cached_translation.youtube_id in songs_target_ids
+				):
 					continue
 
 				if playlist_sync.second_provider == 'spotify':
-					songs_translated.append(ApiSong(
-						song_id=cached_translation.spotify_id,
-						artist='unset, fetched from translation cache',
-						duration_ms=-1,
-						id_in_playlist=-1,
-						image_url='unset, fetched from translation cache',
-						release_date='unset, fetched from translation cache',
-						title='unset, fetched from translation cache',
-					))
+					songs_translated.append(
+						ApiSong(
+							song_id=cached_translation.spotify_id,
+							artist='unset, fetched from translation cache',
+							duration_ms=-1,
+							id_in_playlist=-1,
+							image_url='unset, fetched from translation cache',
+							release_date='unset, fetched from translation cache',
+							title='unset, fetched from translation cache',
+						)
+					)
 				elif playlist_sync.second_provider == 'youtube':
-					songs_translated.append(ApiSong(
-						song_id=cached_translation.youtube_id,
-						artist='unset, fetched from translation cache',
-						duration_ms=-1,
-						id_in_playlist=-1,
-						image_url='unset, fetched from translation cache',
-						release_date='unset, fetched from translation cache',
-						title='unset, fetched from translation cache',
-					))
+					songs_translated.append(
+						ApiSong(
+							song_id=cached_translation.youtube_id,
+							artist='unset, fetched from translation cache',
+							duration_ms=-1,
+							id_in_playlist=-1,
+							image_url='unset, fetched from translation cache',
+							release_date='unset, fetched from translation cache',
+							title='unset, fetched from translation cache',
+						)
+					)
 				else:
 					raise Exception('provider not implemented')
 
 				continue
-
-			# search on provider and update cache
-			search_response = provider_class_instance_2.search_song(
-				ApiSearchQuery(artist_name=song_o.artist, song_title=song_o.title)
-			)
-			if not search_response.success:
-				error_bag.append(
-					f'[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] {search_response.message}'
+			else:
+				# search on provider and update cache
+				search_response = provider_class_instance_2.search_song(
+					ApiSearchQuery(artist_name=song_o.artist, song_title=song_o.title)
 				)
-				continue
+				if not search_response.success:
+					error_bag.append(
+						f'[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] {search_response.message}'
+					)
+					continue
 
-			search_results = search_response.data
-			if len(search_results) == 0:
-				error_bag.append(
-					f'[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] No corresponding song found.'
+				search_results = search_response.data
+				if len(search_results) == 0:
+					error_bag.append(
+						f'[provider: {playlist_sync.second_provider}, title: {song_o.title}, artist: {song_o.artist}] No corresponding song found.'
+					)
+					continue
+				search_result = search_results[0]
+
+				# do not add same song twice
+				if search_result.id in songs_target_ids:
+					continue
+
+				# add song to translation cache
+				cached_translation = SongIdTranslation(
+					spotify_id=song_o.id
+					if playlist_sync.first_provider == 'spotify'
+					else search_result.id,
+					youtube_id=song_o.id
+					if playlist_sync.first_provider == 'youtube'
+					else search_result.id,
 				)
-				continue
-			search_result = search_results[0]
 
-			# do not add same song twice
-			if search_result.id in songs_target_ids:
-				continue
-			
-			# add song to translation cache
-			cached_translation = SongIdTranslation(
-				spotify_id=song_o.id if playlist_sync.first_provider == 'spotify' else search_result.id,
-				youtube_id=song_o.id if playlist_sync.first_provider == 'youtube' else search_result.id
-			)
-
-			songs_translated.append(search_result)
+				songs_translated.append(search_result)
 
 		translated_ids = [s.id for s in songs_translated]
 
