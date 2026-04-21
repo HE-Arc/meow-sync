@@ -12,6 +12,7 @@ import {
     useFirstProviderPlaylists,
     useSecondProviderPlaylists,
 } from "@/composables/usePlaylistProvider";
+import { useUserInfo } from "@/composables/useUserInfo";
 import {
     ProvidersInformations,
     type SyncProvider,
@@ -36,11 +37,26 @@ const state: Ref<PlaylistWithId> = ref({
 const first_selected_provider = computed(() => state.value.first_provider);
 const second_selected_provider = computed(() => state.value.second_provider);
 
-const providers = SyncProviders.map((p) => ({
-    label: ProvidersInformations[p].name,
-    value: p,
-    icon: ProvidersInformations[p].icon,
-}));
+const {user, isUserLoading} = useUserInfo();
+
+const providers = computed(() => {
+    if(isUserLoading.value) {
+        return [];
+    }
+    const userProviders = user.value?.connections.map((conn) => conn.provider) || [];
+    if(userProviders.length < 2) {
+        const first = userProviders[0] || "spotify";
+        firstProvider.value = first;
+        secondProvider.value = first;
+    }
+    return SyncProviders.filter((provider) =>
+        userProviders.includes(provider),
+    ).map((provider) => ({
+        value: provider,
+        label: ProvidersInformations[provider].name,
+        icon: ProvidersInformations[provider].icon,
+    }));
+});
 
 const {
     firstProvider,
@@ -101,10 +117,10 @@ const { mutateAsync: update, asyncStatus: updateStatus } = useUpdatePlaylist();
 // Computed values
 const isLoading = computed(
     () =>
-        (props.isEditMode && isPlaylistLoading.value) ||
+        (props.isEditMode && (isPlaylistLoading.value || isUserLoading.value)) ||
         (!props.isEditMode &&
-            isFirstProviderPlaylistsLoading.value &&
-            isSecondProviderPlaylistsLoading.value),
+            (isFirstProviderPlaylistsLoading.value ||
+            isSecondProviderPlaylistsLoading.value || isUserLoading.value)),
 );
 
 const isSubmitting = computed(
@@ -127,6 +143,17 @@ async function submit(_event: FormSubmitEvent<PlaylistWithId>) {
             <UIcon name="lucide:loader-2" class="text-xl" />
         </span>
         <p>Loading...</p>
+    </div>
+    <div v-else-if="providers.length < 2" class="flex items-center justify-center flex-col">
+        <p class="text-slate-500 dark:text-slate-400 mb-4">
+            You need to connect at least two music provider to create a sync pair
+        </p>
+        <UButton
+            color="primary"
+            @click="router.push('/settings')"
+        >
+            Connect Provider
+        </UButton>
     </div>
     <div v-else>
         <div class="max-w-lg mx-auto">

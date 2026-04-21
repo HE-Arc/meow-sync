@@ -7,7 +7,7 @@ export const runSync = defineMutation(() => {
 	const mutation = useMutation({
 		mutation: async (playlist_sync_id: number) => {
 			const res = await client.POST("/api/playlists-sync/{playlist_sync_id}", {
-				params: { path: { playlist_sync_id } },
+				params: { path: { playlist_sync_id }, query: { inverse: true } },
 			});
 			return res.data;
 		},
