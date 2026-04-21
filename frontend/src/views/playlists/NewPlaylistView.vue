@@ -144,9 +144,9 @@ async function submit(_event: FormSubmitEvent<PlaylistWithId>) {
         </span>
         <p>Loading...</p>
     </div>
-    <div v-else-if="providers.length < 2" class="text-center">
+    <div v-else-if="providers.length < 2" class="flex items-center justify-center flex-col">
         <p class="text-slate-500 dark:text-slate-400 mb-4">
-            You need to connect at least two music provider to create a sync pair.
+            You need to connect at least two music provider to create a sync pair
         </p>
         <UButton
             color="primary"
