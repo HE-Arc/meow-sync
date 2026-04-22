@@ -10,9 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
-from dotenv import load_dotenv
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -130,6 +131,40 @@ AUTH_PASSWORD_VALIDATORS = [
 		'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
 	},
 ]
+
+LOGGING = {
+	'version': 1,
+	'disable_existing_loggers': False,
+	'loggers': {
+		'': {
+			'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
+			'handlers': ['console', 'file'],
+		}
+	},
+	'handlers': {
+		'console': {
+			'class': 'logging.StreamHandler',
+			'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
+			'formatter': 'simple',
+		},
+		'file': {
+			'class': 'logging.FileHandler',
+			'filename': 'django.log',
+			'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
+			'formatter': 'verbose',
+		},
+	},
+	'formatters': {
+		'verbose': {
+			'format': '{name} {levelname} {asctime} {module} {process:d} {thread:d} {message}',
+			'style': '{',
+		},
+		'simple': {
+			'format': '{levelname} {message}',
+			'style': '{',
+		},
+	},
+}
 
 
 # Internationalization
