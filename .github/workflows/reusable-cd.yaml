@@ -128,5 +128,5 @@ jobs:
               /home/django/.local/bin/uv sync
               /home/django/.local/bin/uv run manage.py collectstatic --noinput
               /home/django/.local/bin/uv run manage.py migrate
-              sudo systemctl restart hypercorn
+              sudo systemctl start hypercorn
 
