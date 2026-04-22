@@ -21,8 +21,8 @@ class OAuthConnection(AbstractBaseModel):
 
 	provider_user_id = models.CharField(max_length=255)
 	provider = models.CharField(max_length=255, choices=MusicProvider.choices)
-	access_token = models.CharField(max_length=255)
-	refresh_token = models.CharField(max_length=255)
+	access_token = models.TextField()
+	refresh_token = models.TextField()
 	token_expires_at = models.DateTimeField()
 	extra_data = models.JSONField(null=True)
 
