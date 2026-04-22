@@ -1,53 +1,57 @@
+import logging
 import random
 import string
-import rest_framework.viewsets
 from datetime import datetime, timedelta
 
-from .permissions import IsAuthorOrReadOnly
-from .models import (
-	Comment,
-	OAuthState,
-	OAuthConnection,
-	MusicProvider,
-	PlaylistSynchronization,
-	SongIdTranslation,
-)
-from .serializers import (
-	CommentSerializer,
-	PlaylistSynchronizationSerializer,
-	SongIdTranslationSerializer,
-	MeSerializer,
-	OAuthCallbackSuccessSerializer,
-	OAuthLoginResponseSerializer,
-	OAuthMessageSerializer,
-	SearchResponseSerializer,
-	ProviderPlaylistsResponseSerializer,
-	ProviderSinglePlaylistsResponseSerializer,
-	SyncPlaylistResponseSerializer,
-)
+import rest_framework.viewsets
+from django.contrib.auth.models import User
 from drf_spectacular.utils import (
 	OpenApiParameter,
 	OpenApiResponse,
 	extend_schema,
 	extend_schema_view,
 )
-from rest_framework import status, serializers
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import serializers, status
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import (
+	Comment,
+	MusicProvider,
+	OAuthConnection,
+	OAuthState,
+	PlaylistSynchronization,
+	SongIdTranslation,
+)
 from .music_providers_api.ApiInterface import (
-	ApiInterface,
-	ApiSuccess,
 	ApiError,
-	ApiUser,
+	ApiInterface,
 	ApiSearchQuery,
 	ApiSong,
+	ApiSuccess,
+	ApiUser,
 )
 from .music_providers_api.SpotifyApi import SpotifyApi
 from .music_providers_api.YoutubeApi import YoutubeApi
-from django.contrib.auth.models import User
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (
+	CommentSerializer,
+	MeSerializer,
+	OAuthCallbackSuccessSerializer,
+	OAuthLoginResponseSerializer,
+	OAuthMessageSerializer,
+	PlaylistSynchronizationSerializer,
+	ProviderPlaylistsResponseSerializer,
+	ProviderSinglePlaylistsResponseSerializer,
+	SearchResponseSerializer,
+	SongIdTranslationSerializer,
+	SyncPlaylistResponseSerializer,
+)
+
+logger = logging.getLogger(__name__)
 
 
 PROVIDER_PARAMETER = OpenApiParameter(
@@ -113,7 +117,7 @@ def _ensure_access_token_valid(oauth_connection: OAuthConnection) -> bool:
 
 	provider_api_class = get_api_interface_class_for_provider(oauth_connection.provider)
 	if not provider_api_class:
-		print(
+		logger.warning(
 			f'Could not find API class for provider {oauth_connection.provider} when refreshing tokens.'
 		)
 		return False
@@ -129,7 +133,9 @@ def _ensure_access_token_valid(oauth_connection: OAuthConnection) -> bool:
 		oauth_connection.save()
 		return True
 	except Exception as e:
-		print(f'Error refreshing tokens for provider {oauth_connection.provider}: {e}')
+		logger.error(
+			f'Error refreshing tokens for provider {oauth_connection.provider}: {e}'
+		)
 		return False
 
 
@@ -143,12 +149,12 @@ def _get_oauth_connection_for_user_and_provider(
 		if _ensure_access_token_valid(connection):
 			return connection
 		else:
-			print(
+			logger.warning(
 				f'Access token for provider {provider} is expired and could not be refreshed.'
 			)
 			return None
 	except OAuthConnection.DoesNotExist:
-		print(
+		logger.error(
 			f'No OAuthConnection found for user {user.username} and provider {provider}.'
 		)
 		return None
@@ -167,7 +173,7 @@ def get_api_interface_class_for_provider(provider: str) -> type[ApiInterface] | 
 	try:
 		return PROVIDER_CLASS_MAP[provider]
 	except Exception as e:
-		print(f'Error getting API interface class for provider {provider}: {e}')
+		logger.error(f'Error getting API interface class for provider {provider}: {e}')
 		return None
 
 
@@ -234,7 +240,7 @@ class OAuthCallbackView(APIView):
 	def get(self, request, provider: str) -> Response:
 		code = request.GET.get('code')
 		state = request.GET.get('state')
-		print(
+		logger.debug(
 			f'OAuth  callback with state: {state}, code: {code}, provider: {provider}'
 		)
 
@@ -260,7 +266,7 @@ class OAuthCallbackView(APIView):
 			)
 
 			if not provider_user_response.success:
-				print(
+				logger.info(
 					f'Could not get user data for provider {oauth_state.provider} - {provider_user_response.message}'
 				)
 				return Response(
@@ -271,7 +277,7 @@ class OAuthCallbackView(APIView):
 				)
 			try:
 				if not provider_user_response.data:
-					print(
+					logger.error(
 						f'Provider {oauth_state.provider} returned success but no user data.'
 					)
 					return Response(
@@ -372,13 +378,13 @@ class OAuthCallbackView(APIView):
 				)
 
 		except OAuthState.DoesNotExist:
-			print(f'OAuthState does not exist for state: {state}')
+			logger.error(f'OAuthState does not exist for state: {state}')
 			return Response(
 				{'message': 'Invalid state'},
 				status=status.HTTP_404_NOT_FOUND,
 			)
 		except OAuthState.MultipleObjectsReturned:
-			print(
+			logger.critical(
 				f'More than one OAuthState with the same state: {state}. Something went horribly wrong.'
 			)
 
@@ -428,7 +434,7 @@ class OAuthDisconnectView(APIView):
 				status=status.HTTP_200_OK,
 			)
 		except OAuthConnection.DoesNotExist:
-			print(f'OAuthConnection does not exist for provider: {provider}')
+			logger.error(f'OAuthConnection does not exist for provider: {provider}')
 			return Response(
 				{'message': f'OAuthConnection does not exist for provider: {provider}'},
 				status=status.HTTP_404_NOT_FOUND,
@@ -641,7 +647,7 @@ class SyncPlaylist(APIView):
 		current_user = request.user
 
 		inverse = True if request.GET.get('inverse') == 'true' else False
-		print('INVERSE: ', inverse)
+		logger.debug('INVERSE: ', inverse)
 
 		try:
 			playlist_sync: PlaylistSynchronization = (
@@ -731,9 +737,9 @@ class SyncPlaylist(APIView):
 				cached_translation = SongIdTranslation.objects.filter(
 					spotify_id=song_o.id
 				).first()
-				print('CACHED LOOKUP SPOTIFY ', cached_translation)
+				logger.debug('CACHED LOOKUP SPOTIFY ', cached_translation)
 			elif playlist_sync.first_provider == 'youtube':
-				print('CACHED LOOKUP YOUTUBE ', cached_translation)
+				logger.debug('CACHED LOOKUP YOUTUBE ', cached_translation)
 				cached_translation = SongIdTranslation.objects.filter(
 					youtube_id=song_o.id
 				).first()
@@ -741,7 +747,7 @@ class SyncPlaylist(APIView):
 				raise Exception('provider not implemented')
 
 			if cached_translation:
-				print('CACHED FOUND !!')
+				logger.debug('CACHED FOUND !!')
 				# do not add same song twice
 				if (
 					cached_translation.spotify_id in songs_target_ids
@@ -778,7 +784,7 @@ class SyncPlaylist(APIView):
 
 				continue
 			else:
-				print('no cache found, searching via API')
+				logger.debug('no cache found, searching via API')
 				# search on provider and update cache
 				search_response = provider_class_instance_2.search_song(
 					ApiSearchQuery(artist_name=song_o.artist, song_title=song_o.title)
@@ -810,7 +816,7 @@ class SyncPlaylist(APIView):
 					if playlist_sync.first_provider == 'youtube'
 					else search_result.id,
 				)
-				print('caching transition: ', cached_translation)
+				logger.debug('caching transition: ', cached_translation)
 				cached_translation.save()
 
 				songs_translated.append(search_result)
