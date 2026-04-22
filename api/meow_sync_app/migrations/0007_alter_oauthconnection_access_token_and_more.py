@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+	dependencies = [
+		('meow_sync_app', '0006_alter_songidtranslation_spotify_id_and_more'),
+	]
 
-    dependencies = [
-        ('meow_sync_app', '0006_alter_songidtranslation_spotify_id_and_more'),
-    ]
-
-    operations = [
-        migrations.AlterField(
-            model_name='oauthconnection',
-            name='access_token',
-            field=models.TextField(),
-        ),
-        migrations.AlterField(
-            model_name='oauthconnection',
-            name='refresh_token',
-            field=models.TextField(),
-        ),
-    ]
+	operations = [
+		migrations.AlterField(
+			model_name='oauthconnection',
+			name='access_token',
+			field=models.TextField(),
+		),
+		migrations.AlterField(
+			model_name='oauthconnection',
+			name='refresh_token',
+			field=models.TextField(),
+		),
+	]
