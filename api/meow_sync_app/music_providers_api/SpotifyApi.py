@@ -1,17 +1,21 @@
-import os
 import base64
+import logging
+import os
+
 import requests
 
 from .ApiInterface import (
-	ApiInterface,
-	ApiSuccess,
 	ApiError,
-	ApiUser,
-	ApiTokens,
+	ApiInterface,
 	ApiPlaylist,
-	ApiSong,
 	ApiSearchQuery,
+	ApiSong,
+	ApiSuccess,
+	ApiTokens,
+	ApiUser,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SpotifyApi(ApiInterface):
@@ -61,7 +65,7 @@ class SpotifyApi(ApiInterface):
 		response = requests.post(cls.TOKEN_URL, data=token_data, headers=token_headers)
 		token_info = response.json()
 
-		print(token_info)
+		logger.debug(token_info)
 
 		access_token = token_info['access_token']
 		refresh_token = token_info['refresh_token']
@@ -114,7 +118,7 @@ class SpotifyApi(ApiInterface):
 		try:
 			data = current_user_response.json()
 		except Exception as e:
-			print(f'Error parsing Spotify current user response JSON: {e}')
+			logger.error(f'Error parsing Spotify current user response JSON: {e}')
 			return ApiError(
 				status_code=current_user_response.status_code,
 				message='Error parsing response JSON',
@@ -141,7 +145,7 @@ class SpotifyApi(ApiInterface):
 			try:
 				data = playlist_response.json()
 			except Exception as e:
-				print(f'Error parsing Spotify playlists response JSON: {e}')
+				logger.error(f'Error parsing Spotify playlists response JSON: {e}')
 				return ApiError(
 					status_code=playlist_response.status_code,
 					message=f'Error parsing response JSON: "{playlist_response.text}"',
@@ -227,7 +231,7 @@ class SpotifyApi(ApiInterface):
 			try:
 				data = playlist_songs_response.json()
 			except Exception as e:
-				print(f'Error parsing Spotify playlist songs response JSON: {e}')
+				logger.error(f'Error parsing Spotify playlist songs response JSON: {e}')
 				return ApiError(
 					status_code=playlist_songs_response.status_code,
 					message='Error parsing response JSON',
@@ -300,7 +304,9 @@ class SpotifyApi(ApiInterface):
 						message=data['error']['message'],
 					)
 			except Exception as e:
-				print(f'Error parsing Spotify add to playlist response JSON: {e}')
+				logger.error(
+					f'Error parsing Spotify add to playlist response JSON: {e}'
+				)
 				return ApiError(
 					status_code=response.status_code,
 					message='Error parsing response JSON',
@@ -331,7 +337,9 @@ class SpotifyApi(ApiInterface):
 			try:
 				data = response.json()
 			except Exception as e:
-				print(f'Error parsing Spotify remove from playlist response JSON: {e}')
+				logger.error(
+					f'Error parsing Spotify remove from playlist response JSON: {e}'
+				)
 				return ApiError(
 					status_code=response.status_code,
 					message='Error parsing response JSON',
@@ -371,7 +379,7 @@ class SpotifyApi(ApiInterface):
 		try:
 			data = response.json()
 		except Exception as e:
-			print(f'Error parsing Spotify create playlist response JSON: {e}')
+			logger.error(f'Error parsing Spotify create playlist response JSON: {e}')
 			return ApiError(
 				status_code=response.status_code,
 				message='Failed to parse JSON',
@@ -422,7 +430,7 @@ class SpotifyApi(ApiInterface):
 		try:
 			data = response.json()
 		except Exception as e:
-			print(f'Error parsing Spotify search query response JSON: {e}')
+			logger.error(f'Error parsing Spotify search query response JSON: {e}')
 			return ApiError(
 				status_code=response.status_code,
 				message='Failed to parse JSON',

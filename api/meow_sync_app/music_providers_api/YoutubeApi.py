@@ -1,16 +1,20 @@
+import logging
 import os
 
 import requests
+
 from .ApiInterface import (
-	ApiInterface,
-	ApiSuccess,
 	ApiError,
-	ApiUser,
-	ApiTokens,
+	ApiInterface,
 	ApiPlaylist,
-	ApiSong,
 	ApiSearchQuery,
+	ApiSong,
+	ApiSuccess,
+	ApiTokens,
+	ApiUser,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class YoutubeApi(ApiInterface):
@@ -64,7 +68,7 @@ class YoutubeApi(ApiInterface):
 			},
 		)
 		token_info = response.json()
-		print(f'Token response: {token_info}')
+		logger.debug(f'Token response: {token_info}')
 
 		access_token = token_info['access_token']
 		refresh_token = token_info['refresh_token']
@@ -88,7 +92,7 @@ class YoutubeApi(ApiInterface):
 			},
 		)
 		token_info = response.json()
-		print(f'Token refresh response: {token_info}')
+		logger.debug(f'Token refresh response: {token_info}')
 
 		access_token = token_info['access_token']
 		new_refresh_token = token_info.get('refresh_token', refresh_token)
@@ -111,7 +115,7 @@ class YoutubeApi(ApiInterface):
 		try:
 			data = current_user_response.json()
 		except Exception as e:
-			print(f'Error parsing Youtube current user response JSON: {e}')
+			logger.debug(f'Error parsing Youtube current user response JSON: {e}')
 			return ApiError(
 				status_code=current_user_response.status_code,
 				message='Error parsing response JSON',
@@ -170,7 +174,7 @@ class YoutubeApi(ApiInterface):
 		try:
 			data = response.json()
 		except Exception as e:
-			print(f'Error parsing Youtube playlists response JSON: {e}')
+			logger.error(f'Error parsing Youtube playlists response JSON: {e}')
 			return ApiError(
 				status_code=response.status_code,
 				message='Error parsing response JSON',
@@ -199,7 +203,7 @@ class YoutubeApi(ApiInterface):
 		try:
 			data = response.json()
 		except Exception as e:
-			print(f'Error parsing Youtube playlist info response JSON: {e}')
+			logging.error(f'Error parsing Youtube playlist info response JSON: {e}')
 			raise Exception('Error parsing response JSON')
 
 		# Youtube API error
@@ -234,7 +238,9 @@ class YoutubeApi(ApiInterface):
 			try:
 				data = response.json()
 			except Exception as e:
-				print(f'Error parsing Youtube playlist songs response JSON: {e}')
+				logging.error(
+					f'Error parsing Youtube playlist songs response JSON: {e}'
+				)
 				return ApiError(
 					status_code=response.status_code,
 					message='Error parsing response JSON',
@@ -281,7 +287,9 @@ class YoutubeApi(ApiInterface):
 			try:
 				_ = response.json()
 			except Exception as e:
-				print(f'Error parsing Youtube add to playlist response JSON: {e}')
+				logging.error(
+					f'Error parsing Youtube add to playlist response JSON: {e}'
+				)
 				return ApiError(
 					status_code=response.status_code,
 					message='Error parsing response JSON',
@@ -311,7 +319,9 @@ class YoutubeApi(ApiInterface):
 			try:
 				data = response.json()
 			except Exception as e:
-				print(f'Error parsing Youtube remove from playlist response JSON: {e}')
+				logging.error(
+					f'Error parsing Youtube remove from playlist response JSON: {e}'
+				)
 				return ApiError(
 					status_code=response.status_code,
 					message='Error parsing response JSON',
@@ -350,7 +360,7 @@ class YoutubeApi(ApiInterface):
 		try:
 			data = response.json()
 		except Exception as e:
-			print(f'Error parsing Youtube create playlist response JSON: {e}')
+			logging.error(f'Error parsing Youtube create playlist response JSON: {e}')
 			return ApiError(
 				status_code=response.status_code,
 				message='Error parsing response JSON',
@@ -397,7 +407,7 @@ class YoutubeApi(ApiInterface):
 		try:
 			data = response.json()
 		except Exception as e:
-			print(f'Error parsing Youtube search query response JSON: {e}')
+			logging.error(f'Error parsing Youtube search query response JSON: {e}')
 			return ApiError(
 				status_code=response.status_code,
 				message='Failed to parse JSON',
