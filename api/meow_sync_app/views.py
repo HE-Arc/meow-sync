@@ -337,9 +337,8 @@ class OAuthCallbackView(APIView):
 							+ random_str_alphanum(4)
 						)  # some randomness for users with same name
 
-					user = User.objects.create(
-						username=username, password=random_str_alphanum(255)
-					)
+					user = User(username=username)
+					user.set_unusable_password()
 					user.save()
 					oauth_state.user = user
 					oauth_state.save()
